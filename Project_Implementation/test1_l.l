@@ -1,85 +1,90 @@
+%option yylineno
+
 %{
+
+    extern "C"
+    {
+        int yylex(void);
+    }
+
+#include<stdio.h>
 #include "y.tab.h"
 #include<string.h>
+#include "test1.hpp"
 
-// void yyerror(char *s);
-// int yylex();
 
-//node of the stack
-struct node
+#define YY_USER_ACTION \
+    yylloc.first_line = yylloc.last_line; \
+    yylloc.first_column = yylloc.last_column; \
+    for(int i = 0; yytext[i] != '\0'; i++) { \
+        if(yytext[i] == '\n') { \
+            yylloc.last_line++; \
+            yylloc.last_column = 0; \
+        } \
+        else { \
+            yylloc.last_column++; \
+        } \
+    }
+
+
+//function to initialize the my_stack
+void init(my_stack_t *ptr_my_stack)
 {
-    int level_of_indentation; 
-    struct node *next;
-    struct node *prev;
-};
-typedef struct node node_t;
-
-//stack used to maintain information about the level of indentation
-struct stack
-{
-    node_t *head;
-    node_t *top;
-};
-typedef struct stack stack_t;
-
-//function to initialize the stack
-void init(stack_t *ptr_stack)
-{
-    ptr_stack->head = NULL;
-    ptr_stack->top = NULL;
+    ptr_my_stack->head = NULL;
+    ptr_my_stack->top = NULL;
 }
 
-//function to retrieve the level of indentation at the top of the stack
-int top(stack_t *ptr_stack)
+//function to retrieve the level of indentation at the top of the my_stack
+int top(my_stack_t *ptr_my_stack)
 {
-    return ptr_stack->top->level_of_indentation;
+    return ptr_my_stack->top->level_of_indentation;
 }
 
-//function to push an element into the stack
-void push(stack_t *ptr_stack, int ind_lev)
+//function to push an element into the my_stack
+void push(my_stack_t *ptr_my_stack, int ind_lev)
 {
     node_t *temp = (node_t*)malloc(sizeof(node_t));
     temp->level_of_indentation = ind_lev;
     temp->next = NULL;
     temp->prev = NULL;
 
-    //stack is empty
-    if(ptr_stack->head==NULL)
+    //my_stack is empty
+    if(ptr_my_stack->head==NULL)
     {
-        ptr_stack->head = temp;
-        ptr_stack->top = temp;
+        ptr_my_stack->head = temp;
+        ptr_my_stack->top = temp;
     }
 
-    //stack is not empty
+    //my_stack is not empty
     else
     {
-        ptr_stack->top->next = temp;
-        temp->prev = ptr_stack->top;
-        ptr_stack->top = temp;
+        ptr_my_stack->top->next = temp;
+        temp->prev = ptr_my_stack->top;
+        ptr_my_stack->top = temp;
     }
 
 }
 
-//function to pop an element from the stack
-void pop(stack_t *ptr_stack)
+//function to pop an element from the my_stack
+void pop(my_stack_t *ptr_my_stack)
 {
-    //stack is not empty
-    if(ptr_stack->head!=NULL)
+    //my_stack is not empty
+    if(ptr_my_stack->head!=NULL)
     {
-        //stack has only one node
-        if(ptr_stack->head == ptr_stack->top)
+        //my_stack has only one node
+        if(ptr_my_stack->head == ptr_my_stack->top)
         {
-            free(ptr_stack->head);
-            ptr_stack->head = NULL;
-            ptr_stack->top = NULL;
+            free(ptr_my_stack->head);
+            ptr_my_stack->head = NULL;
+            ptr_my_stack->top = NULL;
         }
 
-        //stack has more than one node
+        //my_stack has more than one node
         else
         {
-            ptr_stack->top->prev->next = NULL;
-            node_t *temp = ptr_stack->top;
-            ptr_stack->top = temp->prev;
+            ptr_my_stack->top->prev->next = NULL;
+            node_t *temp = ptr_my_stack->top;
+            ptr_my_stack->top = temp->prev;
             free(temp);
             
         }
@@ -96,6 +101,10 @@ int find_level_indentation_tab(char *text)
         {
             ++count;
         }
+        else
+        {
+            return count;
+        }
     }
 
     return count;
@@ -111,37 +120,41 @@ int find_level_indentation_space(char *text)
         {
             ++count;
         }
+        else
+        {
+            return count;
+        }
     }
 
     return count;
 }
 
-int yycol_num = 1;
+
 int current_depth = 0;
-stack_t *ptr_stack = (stack_t*)malloc(sizeof(stack_t));
-init(stack_t);
-push(stack_t,0);
+my_stack_t *ptr_my_stack;
 
 %}
-%option yylineno
+
 
 %%
 
-^[\t]+          {
+^[\t ]*$     {;}
+
+^[\t]*          {
                     current_depth = find_level_indentation_tab(yytext);
-                    int prev_ind = top(ptr_stack);
+                    int prev_ind = top(ptr_my_stack);
 
                     //current indentation is the same as the previous line's indentation
-                    if(current_depth == prev_ind)
+                    /*if(current_depth == prev_ind)
                     {
                         yylval.indentation_level = current_depth;
                         return T_Same_indent;
-                    }
+                    }*/
 
                     //current indentation is larger than the previous line's indentation
-                    else if(current_depth > prev_ind)
+                    if(current_depth > prev_ind)
                     {
-                        push(ptr_stack,current_depth);
+                        push(ptr_my_stack,current_depth);
                         yylval.indentation_level = current_depth;
                         return T_Indent;
 
@@ -150,11 +163,13 @@ push(stack_t,0);
                     //current indentation is smaller than the previous line's indentation
                     else if(current_depth <  prev_ind)
                     {
-                        while(current_depth < top(ptr_stack))
+                        int temp_scopes = 0;
+                        while(current_depth < top(ptr_my_stack))
                         {
-                            pop(ptr_stack);
+                            pop(ptr_my_stack);
+                            temp_scopes += 1;
                         }
-                        yylval.indentation_level = current_depth;
+                        yylval.indentation_level = temp_scopes;
                         return T_Dedent;
 
                     }
@@ -162,21 +177,21 @@ push(stack_t,0);
 
                 }
 
-^[ ]+           {
+^[ ]*           {
                     current_depth = find_level_indentation_space(yytext);
-                    int prev_ind = top(ptr_stack);
+                    int prev_ind = top(ptr_my_stack);
 
                     //current indentation is the same as the previous line's indentation
-                    if(current_depth == prev_ind)
+                    /*if(current_depth == prev_ind)
                     {
                         yylval.indentation_level = current_depth;
                         return T_Same_indent;
-                    }
+                    }*/
 
                     //current indentation is larger than the previous line's indentation
-                    else if(current_depth > prev_ind)
+                    if(current_depth > prev_ind)
                     {
-                        push(ptr_stack,current_depth);
+                        push(ptr_my_stack,current_depth);
                         yylval.indentation_level = current_depth;
                         return T_Indent;
 
@@ -185,11 +200,13 @@ push(stack_t,0);
                     //current indentation is smaller than the previous line's indentation
                     else if(current_depth <  prev_ind)
                     {
-                        while(current_depth < top(ptr_stack))
+                        int temp_scopes = 0;
+                        while(current_depth < top(ptr_my_stack))
                         {
-                            pop(ptr_stack);
+                            pop(ptr_my_stack);
+                            temp_scopes += 1;
                         }
-                        yylval.indentation_level = current_depth;
+                        yylval.indentation_level = temp_scopes;
                         return T_Dedent;
 
                     }
@@ -200,57 +217,58 @@ push(stack_t,0);
 \'\'\'([^\']|[\r\n])*?\'\'\'     ;
 \"\"\"([^\"]|[\r\n])*?\"\"\"     ;
 
-"import"    {yylval.keyword = "import"; return T_import;}
-"from"      {yylval.keyword = "from"; return T_from;}
-"True"      {yylval.keyword = "True"; return T_True;}
-"False"     {yylval.keyword = "False"; return T_False;}
-"not"       {yylval.keyword = "not"; return T_not;}
-"and"       {yylval.keyword = "and"; return T_and;}
-"or"        {yylval.keyword = "or"; return T_or;}
-"None"      {yylval.keyword = "None"; return T_None;}
-"if"        {yylval.keyword = "if"; return T_if;}
-"else"      {yylval.keyword = "else"; return T_else;}
-"elif"      {yylval.keyword = "elif"; return T_elif;}
-"for"       {yylval.keyword = "for"; return T_for;}
-"in"        {yylval.keyword = "in"; return T_in;}
-"as"        {yylval.keyword = "as"; return T_as;}
+"import"    {yylval.text = strdup(yytext); return T_import;}
+"True"      {yylval.text = strdup(yytext); return T_True;}
+"False"     {yylval.text = strdup(yytext); return T_False;}
+"not"       {yylval.text = strdup(yytext); return T_not;}
+"and"       {yylval.text = strdup(yytext); return T_and;}
+"or"        {yylval.text = strdup(yytext); return T_or;}
+"if"        {yylval.text = strdup(yytext); return T_if;}
+"else"      {yylval.text = strdup(yytext); return T_else;}
+"elif"      {yylval.text = strdup(yytext); return T_elif;}
+"for"       {yylval.text = strdup(yytext); return T_for;}
+"in"        {yylval.text = strdup(yytext); return T_in;}
 
-"range"     {yylval.text = "range"; return T_range;}
-"list"      {yylval.text = "list"; return T_list;}
+"range"     {yylval.text = strdup(yytext); return T_range;}
+"list"      {yylval.text = strdup(yytext); return T_list;}
 
-"+"     {yylval.text = "+"; return T_plus;}
-"-"     {yylval.text = "-"; return T_minus;}
-"*"     {yylval.text = "*"; return T_star;}
-"/"     {yylval.text = "/"; return T_divide;}
-"%"     {yylval.text = "%"; return T_modulus;}
+"+"     {yylval.text = strdup(yytext); return T_plus;}
+"-"     {yylval.text = strdup(yytext); return T_minus;}
+"*"     {yylval.text = strdup(yytext); return T_star;}
+"/"     {yylval.text = strdup(yytext); return T_divide;}
+"%"     {yylval.text = strdup(yytext); return T_modulus;}
 
-"<"     {yylval.text = "<"; return T_LT;}
-">"     {yylval.text = ">"; return T_GT;}
-"<="    {yylval.text = "<="; return T_LTE;}
-">="    {yylval.text = ">="; return T_GTE;}
-"=="    {yylval.text = "=="; return T_EQ;}
-"!="    {yylval.text = "!="; return T_NEQ;}
+"<"     {yylval.text = strdup(yytext); return T_LT;}
+">"     {yylval.text = strdup(yytext); return T_GT;}
+"<="    {yylval.text = strdup(yytext); return T_LTE;}
+">="    {yylval.text = strdup(yytext); return T_GTE;}
+"=="    {yylval.text = strdup(yytext); return T_EQ;}
+"!="    {yylval.text = strdup(yytext); return T_NEQ;}
 
-";"     {yylval.text = ";"; return T_semicolon;}
-"."     {yylval.text = "."; return T_dot;}
-":"     {yylval.text = ":"; return T_colon;}
-","     {yylval.text = ","; return T_comma;}
-"="     {yylval.text = "="; return T_assignment;}
-"["     {yylval.text = "["; return T_left_sq_b;}
-"]"     {yylval.text = "]"; return T_right_sq_b;}
-"("     {yylval.text = "("; return T_left_par;}
-")"     {yylval.text = ")"; return T_right_par;}
+";"     {yylval.text = strdup(yytext); return T_semicolon;}
+":"     {yylval.text = strdup(yytext); return T_colon;}
+","     {yylval.text = strdup(yytext); return T_comma;}
+"="     {yylval.text = strdup(yytext); return T_assignment;}
+"["     {yylval.text = strdup(yytext); return T_left_sq_b;}
+"]"     {yylval.text = strdup(yytext); return T_right_sq_b;}
+"("     {yylval.text = strdup(yytext); return T_left_par;}
+")"     {yylval.text = strdup(yytext); return T_right_par;}
 
 [0-9]+  {yylval.text = strdup(yytext); return T_number;}
 
-[a-zA-Z_][a-zA-Z_0-9]*  {yylval.text = strdup(yytext); return T_identifier;}
+(\t*)[a-zA-Z_][a-zA-Z_0-9]*  {
+                                current_depth = find_level_indentation_tab(yytext);
+                                int prev_ind = top(ptr_my_stack);
+
+                                yylval.text = strdup(yytext); return T_identifier;
+                             }
 
 \"([^\"\n])*\"  {yylval.text = strdup(yytext); return T_string;}
 \'([^\'\n])*\'  {yylval.text = strdup(yytext); return T_string;}
 
-"\n"    {yylval.text = "\n"; return T_Newline;}
+"\n"    {yylval.text = strdup(yytext); return T_Newline;}
 
-<<EOF>>     {yylval = "eof"; return T_eof;}
+
 
 
 
