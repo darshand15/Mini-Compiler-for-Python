@@ -30,6 +30,7 @@ extern "C"
 {
     int yyparse(void);
     int yylex(void);
+    
     int yywrap()
     {
         return 1;
@@ -49,9 +50,9 @@ extern "C"
 
 %token <indentation_level> T_Indent T_Dedent 
 
-%token <text> T_import T_True T_False T_not T_and T_or T_if T_else T_elif T_for T_in T_range T_list T_plus T_minus T_star T_divide T_modulus T_LT T_GT T_LTE T_GTE T_EQ T_NEQ T_semicolon T_colon T_comma T_assignment T_left_sq_b T_right_sq_b T_left_par T_right_par T_number T_identifier T_string T_Newline 
+%token <text> T_import T_True T_False T_not T_and T_or T_if T_else T_elif T_for T_in T_range T_list T_plus T_minus T_star T_divide T_modulus T_LT T_GT T_LTE T_GTE T_EQ T_NEQ T_semicolon T_colon T_comma T_assignment T_left_sq_b T_right_sq_b T_left_par T_right_par T_number T_identifier T_string T_Newline
 
-%type <text> input_file statement simple_statement next_simple_statement small_statement import_statement expr_statement assignment_statement assignment_expr or_test and_test not_test comparison arith_exp arith_exp2 factor term constant list_index compound_statement if_statement test optional_if_else suite suite1 repeat_statement elif_statement optional_else for_statement exprlist first_exprlist last_exprlist testlist repeat_test range_fn range_term
+%type <text> input_file statement simple_statement next_simple_statement small_statement import_statement expr_statement assignment_statement assignment_expr or_test and_test not_test comparison arith_exp arith_exp2 factor term constant list_index compound_statement if_statement test optional_if_else suite suite_for suite1 repeat_statement elif_statement optional_else for_statement exprlist first_exprlist last_exprlist testlist repeat_test range_fn range_term
 
 
 %right T_assignment
@@ -71,7 +72,7 @@ input_file  : T_Newline input_file
               {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
             | statement input_file
               {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
-            | {$$ = empty_string;}
+            | {;}
             ;
 
 statement   : simple_statement
@@ -246,6 +247,10 @@ suite   : simple_statement
           suite1
         ;
 
+suite_for   : simple_statement
+            | T_Newline T_Indent suite1
+            ;
+
 suite1  : statement T_Dedent
           {
               scope_count -= $2;
@@ -258,6 +263,8 @@ suite1  : statement T_Dedent
 
 repeat_statement    : statement repeat_statement
                     | statement
+                    | T_Newline repeat_statement
+                    | T_Newline
                     ;
 
 elif_statement  : {$$ = empty_string;}
@@ -268,7 +275,12 @@ optional_else   : {$$ = empty_string;}
                 | T_else T_colon suite
                 ;
 
-for_statement   : T_for exprlist T_in testlist T_colon suite optional_else
+for_statement   : T_for  
+                  {
+                    scope_count += 1;
+                    test.create_map(scope_count);
+                  }
+                  exprlist T_in testlist T_colon suite_for optional_else
                 ;
 
 exprlist    : first_exprlist last_exprlist 
@@ -276,7 +288,7 @@ exprlist    : first_exprlist last_exprlist
 
 first_exprlist  : T_identifier
                   {
-                    test.insert($1, @1.first_line, "" , scope_count + 1, @1.first_column);
+                    test.insert($1, @1.first_line, "" , scope_count, @1.first_column);
                   }
                 ;
 

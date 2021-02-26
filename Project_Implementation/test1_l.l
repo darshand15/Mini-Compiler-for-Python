@@ -135,10 +135,11 @@ my_stack_t *ptr_my_stack;
 
 %}
 
+%x REALLYEND
 
 %%
 
-^[\t ]*$     {;}
+^[ \t]*\n$       {;}
 
 ^[\t]*          {
                     current_depth = find_level_indentation_tab(yytext);
@@ -217,16 +218,126 @@ my_stack_t *ptr_my_stack;
 \'\'\'([^\']|[\r\n])*?\'\'\'     ;
 \"\"\"([^\"]|[\r\n])*?\"\"\"     ;
 
+^"import"   {
+                int prev_ind = top(ptr_my_stack);
+
+                if(prev_ind!=0)
+                {
+                    int temp_scopes = 0;
+                    while(top(ptr_my_stack)!=0)
+                    {
+                        pop(ptr_my_stack);
+                        temp_scopes += 1;
+                    }
+                    yylval.indentation_level = temp_scopes;
+                    yyless(0);
+                    return T_Dedent;
+                                
+                }
+
+                yylval.text = strdup(yytext); 
+                return T_import;
+
+            }
+
 "import"    {yylval.text = strdup(yytext); return T_import;}
+
 "True"      {yylval.text = strdup(yytext); return T_True;}
 "False"     {yylval.text = strdup(yytext); return T_False;}
 "not"       {yylval.text = strdup(yytext); return T_not;}
 "and"       {yylval.text = strdup(yytext); return T_and;}
 "or"        {yylval.text = strdup(yytext); return T_or;}
+
+^"if"       {
+                int prev_ind = top(ptr_my_stack);
+
+                if(prev_ind!=0)
+                {
+                    int temp_scopes = 0;
+                    while(top(ptr_my_stack)!=0)
+                    {
+                        pop(ptr_my_stack);
+                        temp_scopes += 1;
+                    }
+                    yylval.indentation_level = temp_scopes;
+                    yyless(0);
+                    return T_Dedent;
+                                
+                }
+
+                yylval.text = strdup(yytext); 
+                return T_if;
+            }
+
 "if"        {yylval.text = strdup(yytext); return T_if;}
+
+^"else"     {
+                int prev_ind = top(ptr_my_stack);
+
+                if(prev_ind!=0)
+                {
+                    int temp_scopes = 0;
+                    while(top(ptr_my_stack)!=0)
+                    {
+                        pop(ptr_my_stack);
+                        temp_scopes += 1;
+                    }
+                    yylval.indentation_level = temp_scopes;
+                    yyless(0);
+                    return T_Dedent;
+                                
+                }
+
+                yylval.text = strdup(yytext); 
+                return T_else;
+            }
+
 "else"      {yylval.text = strdup(yytext); return T_else;}
+
+^"elif"     {
+                int prev_ind = top(ptr_my_stack);
+
+                if(prev_ind!=0)
+                {
+                    int temp_scopes = 0;
+                    while(top(ptr_my_stack)!=0)
+                    {
+                        pop(ptr_my_stack);
+                        temp_scopes += 1;
+                    }
+                    yylval.indentation_level = temp_scopes;
+                    yyless(0);
+                    return T_Dedent;
+                                
+                }
+                yylval.text = strdup(yytext); 
+                return T_elif;
+            }
+
 "elif"      {yylval.text = strdup(yytext); return T_elif;}
+
+^"for"      {
+                int prev_ind = top(ptr_my_stack);
+
+                if(prev_ind!=0)
+                {
+                    int temp_scopes = 0;
+                    while(top(ptr_my_stack)!=0)
+                    {
+                        pop(ptr_my_stack);
+                        temp_scopes += 1;
+                    }
+                    yylval.indentation_level = temp_scopes;
+                    yyless(0);
+                    return T_Dedent;
+                                
+                }
+                yylval.text = strdup(yytext); 
+                return T_for;
+            }
+
 "for"       {yylval.text = strdup(yytext); return T_for;}
+
 "in"        {yylval.text = strdup(yytext); return T_in;}
 
 "range"     {yylval.text = strdup(yytext); return T_range;}
@@ -256,12 +367,32 @@ my_stack_t *ptr_my_stack;
 
 [0-9]+  {yylval.text = strdup(yytext); return T_number;}
 
-(\t*)[a-zA-Z_][a-zA-Z_0-9]*  {
-                                current_depth = find_level_indentation_tab(yytext);
-                                int prev_ind = top(ptr_my_stack);
 
-                                yylval.text = strdup(yytext); return T_identifier;
-                             }
+
+^[a-zA-Z_][a-zA-Z_0-9]* {
+                            int prev_ind = top(ptr_my_stack);
+
+                            if(prev_ind!=0)
+                            {
+                                int temp_scopes = 0;
+                                while(top(ptr_my_stack)!=0)
+                                {
+                                    pop(ptr_my_stack);
+                                    temp_scopes += 1;
+                                }
+                                yylval.indentation_level = temp_scopes;
+                                yyless(0);
+                                return T_Dedent;
+                                
+                            }
+
+                            yylval.text = strdup(yytext); 
+                            return T_identifier;
+                        }  
+
+[a-zA-Z_][a-zA-Z_0-9]*  {
+                            yylval.text = strdup(yytext); return T_identifier;
+                        }                      
 
 \"([^\"\n])*\"  {yylval.text = strdup(yytext); return T_string;}
 \'([^\'\n])*\'  {yylval.text = strdup(yytext); return T_string;}
@@ -269,10 +400,27 @@ my_stack_t *ptr_my_stack;
 "\n"    {yylval.text = strdup(yytext); return T_Newline;}
 
 
+<INITIAL><<EOF>>        {  
 
-
-
-
+                            BEGIN(REALLYEND);
+                            int prev_ind = top(ptr_my_stack);
+                            printf("\n\n\t%d\n\n\n", prev_ind);
+                            if(prev_ind!=0)
+                            {
+                                int temp_scopes = 0;
+                                while(top(ptr_my_stack)!=0)
+                                {
+                                    pop(ptr_my_stack);
+                                    temp_scopes += 1;
+                                }
+                                yylval.indentation_level = temp_scopes;
+                                //yyless(0);
+                                return T_Dedent;
+                                            
+                            }
+                            return T_Newline; 
+                        }
+<REALLYEND><<EOF>>      { return 0; }
 
 
 %%

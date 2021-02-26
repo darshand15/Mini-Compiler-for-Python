@@ -70,11 +70,12 @@ void node::set_column_no(int column_no)
 
 ostream& operator<<(ostream& o, const node& n)
 {
-    o << left << setw(13) << n.identifier;
-    o << left << setw(12) << n.value;
-    o << left << setw(13) << n.line_no;
-    o << left << setw(15) << n.column_no;
-    o << left << setw(12) << n.scope;
+    
+    o << left << setw(20) << n.identifier;
+    o << left << setw(34) << n.value;
+    o << left << setw(21) << n.line_no;
+    o << left << setw(14) << n.column_no;
+    o << left << setw(13) << n.scope;
     
     
     return o << "\n";
@@ -140,9 +141,9 @@ ostream& operator<<(ostream& o, const symbol_table& tree_h)
         {
             // o << tree_h.tree[i][j].size() << "\n\n";
             o << "Symbol Table Number: " << i << "." << j << "\n";
-            o << "---------------------------------------------------------------------------------------------------" << "\n";
-            o << "SNo \t|\tToken \t|\tValue\t|\tLine No\t|\tColumn No\t|\tScope\t\n";
-            o << "---------------------------------------------------------------------------------------------------" << "\n";
+            o << "----------------------------------------------------------------------------------------------------------------" << "\n";
+            o << "SNo \t|   Token\t|\t\tValue\t\t|    Line No  \t|\tColumn No\t|\tScope\t\n";
+            o << "----------------------------------------------------------------------------------------------------------------" << "\n";
             int k = 0;
             for (auto &it1 : tree_h.tree[i][j])
             {	
