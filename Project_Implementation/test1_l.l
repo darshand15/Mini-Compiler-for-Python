@@ -8,8 +8,9 @@
     }
 
 #include<stdio.h>
-#include "y.tab.h"
+#include<stdlib.h>
 #include<string.h>
+#include "y.tab.h"
 #include "test1.hpp"
 
 
@@ -27,7 +28,7 @@
     }
 
 
-//function to initialize the my_stack
+//function to initialize my_stack
 void init(my_stack_t *ptr_my_stack)
 {
     ptr_my_stack->head = NULL;
@@ -40,7 +41,7 @@ int top(my_stack_t *ptr_my_stack)
     return ptr_my_stack->top->level_of_indentation;
 }
 
-//function to push an element into the my_stack
+//function to push an element into my_stack
 void push(my_stack_t *ptr_my_stack, int ind_lev)
 {
     node_t *temp = (node_t*)malloc(sizeof(node_t));
@@ -65,7 +66,7 @@ void push(my_stack_t *ptr_my_stack, int ind_lev)
 
 }
 
-//function to pop an element from the my_stack
+//function to pop an element from my_stack
 void pop(my_stack_t *ptr_my_stack)
 {
     //my_stack is not empty
@@ -214,9 +215,9 @@ my_stack_t *ptr_my_stack;
 
                 }
 
-#.*                         ;
-\'\'\'([^\']|[\r\n])*?\'\'\'     ;
-\"\"\"([^\"]|[\r\n])*?\"\"\"     ;
+#.*                         {;}
+\'\'\'([^\']|[\r\n])*?\'\'\'     {;}
+\"\"\"([^\"]|[\r\n])*?\"\"\"     {;}
 
 ^"import"   {
                 int prev_ind = top(ptr_my_stack);
@@ -367,7 +368,10 @@ my_stack_t *ptr_my_stack;
 
 [0-9]+  {yylval.text = strdup(yytext); return T_number;}
 
-
+[0-9]*(\.[0-9]+)?([eE][+-]?[0-9]+)?     {
+                                            snprintf(yylval.text, 50, "%f", atof(yytext)); 
+                                            return T_number;
+                                        }
 
 ^[a-zA-Z_][a-zA-Z_0-9]* {
                             int prev_ind = top(ptr_my_stack);
@@ -386,12 +390,38 @@ my_stack_t *ptr_my_stack;
                                 
                             }
 
-                            yylval.text = strdup(yytext); 
+                            if(yyleng < 32)
+                            {
+                                yylval.text = strdup(yytext);
+                            }
+                            else
+                            {
+                                printf("\n\nError: Identifier is too long, truncating the identifier to the first 31 characters\n\n");
+                                char id_temp[32];
+                                strncpy(id_temp,yytext,31);
+                                id_temp[31] = '\0';
+                                yylval.text = strdup(id_temp);
+
+                            }                            
                             return T_identifier;
                         }  
 
 [a-zA-Z_][a-zA-Z_0-9]*  {
-                            yylval.text = strdup(yytext); return T_identifier;
+                            if(yyleng < 32)
+                            {
+                                yylval.text = strdup(yytext);
+                            }
+                            else
+                            {
+                                printf("\n\nError: Identifier is too long, truncating the identifier to the first 31 characters\n\n");
+                                char id_temp[32];
+                                strncpy(id_temp,yytext,31);
+                                id_temp[31] = '\0';
+                                yylval.text = strdup(id_temp);
+
+                            }
+                            
+                            return T_identifier;
                         }                      
 
 \"([^\"\n])*\"  {yylval.text = strdup(yytext); return T_string;}
@@ -404,7 +434,7 @@ my_stack_t *ptr_my_stack;
 
                             BEGIN(REALLYEND);
                             int prev_ind = top(ptr_my_stack);
-                            printf("\n\n\t%d\n\n\n", prev_ind);
+                            //printf("\n\n\t%d\n\n\n", prev_ind);
                             if(prev_ind!=0)
                             {
                                 int temp_scopes = 0;

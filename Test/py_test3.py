@@ -1,7 +1,2 @@
-a = 3
-b = 2
-d = 3
-e = "absdfksdf"
-
-for i in a:
-    f = "udhfsk"
+a = 3.1415E+3
+abcdefghijklmnopqrstuvwxyz1234567890qwerty = "compiler design"

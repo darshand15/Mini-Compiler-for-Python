@@ -140,6 +140,7 @@ ostream& operator<<(ostream& o, const symbol_table& tree_h)
         for (int j = 0; j < tree_h.tree[i].size(); ++j)
         {
             // o << tree_h.tree[i][j].size() << "\n\n";
+            o<< "\n\n";
             o << "Symbol Table Number: " << i << "." << j << "\n";
             o << "----------------------------------------------------------------------------------------------------------------" << "\n";
             o << "SNo \t|   Token\t|\t\tValue\t\t|    Line No  \t|\tColumn No\t|\tScope\t\n";

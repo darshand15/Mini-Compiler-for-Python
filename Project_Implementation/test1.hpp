@@ -8,7 +8,7 @@
 #include <iomanip>
 using namespace std;
 
-//node of the my_stack
+//node of my_stack
 struct my_node
 {
     int level_of_indentation; 

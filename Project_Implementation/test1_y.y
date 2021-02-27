@@ -190,8 +190,8 @@ term    : T_identifier
               if(!test.declaration_exists($1, scope_count))
               {
                   flag = 0;
-                  printf("variable \' %s \' not declared before\n",$1);
-
+                  printf("\n\nvariable \'%s\' not declared before\n\n\n",$1);
+                  yyerror("Undeclared variable");
               }
               $$ = $1;
 
@@ -211,7 +211,8 @@ list_index  : T_identifier T_left_sq_b or_test T_right_sq_b
                 if(!test.declaration_exists($1, scope_count))
                 {
                     flag = 0;
-                    printf("variable \' %s \' not declared before\n",$1);
+                    printf("\n\nvariable \' %s \' not declared before\n\n\n",$1);
+                    yyerror("Undeclared variable");
 
                 }
 
@@ -321,7 +322,9 @@ range_term  : T_identifier
                   if(!test.declaration_exists($1, scope_count))
                   {
                       flag = 0;
-                      printf("variable \' %s \' not declared before\n",$1);
+                      printf("\n\nvariable \'%s\' not declared before\n",$1);
+                      yyerror("Undeclared Variable");
+                      
 
                   }
                   $$ = $1;
@@ -361,14 +364,18 @@ int main()
     push(ptr_my_stack,0);
 
 
-    if (!yyparse() && flag) {
-            printf("\n\n\nParsing is successful\n\n\n");
-        } else {
-            printf("unsuccessful\n");
-        }
-            cout<<"DISPLAY is \n";
-        cout << test;
+    if (!yyparse() && flag) 
+    {
+        printf("\n\n\nParsing is successful\n\n\n");
+    } 
+    else 
+    {
+        printf("\n\nParsing is unsuccessful\n\n");
+    }
+            
+    cout<<"DISPLAY is \n";
+    cout << test;
         
-        return 0;
+    return 0;
 
 }
