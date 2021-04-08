@@ -1,15 +1,20 @@
 %{
 
 #include<stdio.h>
+#include<stdlib.h>
 #include<iostream>
 #include<string.h>
 #include "test1.hpp"
 #include <vector>
 
+#define DEBUG 0
+
 using namespace std;
 symbol_table test;
 
 int flag = 1;
+int temp_no = 0;
+int label_no = 0;
 char *empty_string = strdup("");
 
 
@@ -41,18 +46,28 @@ extern "C"
 %}
 
 %locations
-%union {
+%union 
+{
     int indentation_level;
     char *text;
+
+    struct s1 {char *addr; char *code; char *true_l; char *false_l;} inter_code;
+
+    struct s2 {char *start_r; char *end_r; char *step_r;} range_icg;
+
 }
 
-%start input_file
+%start prog_start
 
 %token <indentation_level> T_Indent T_Dedent 
 
 %token <text> T_import T_True T_False T_not T_and T_or T_if T_else T_elif T_for T_in T_range T_list T_plus T_minus T_star T_divide T_modulus T_LT T_GT T_LTE T_GTE T_EQ T_NEQ T_semicolon T_colon T_comma T_assignment T_left_sq_b T_right_sq_b T_left_par T_right_par T_number T_identifier T_string T_Newline
 
-%type <text> input_file statement simple_statement next_simple_statement small_statement import_statement expr_statement assignment_statement assignment_expr or_test and_test not_test comparison arith_exp arith_exp2 factor term constant list_index compound_statement if_statement test optional_if_else suite suite_for suite1 repeat_statement elif_statement optional_else for_statement exprlist first_exprlist last_exprlist testlist repeat_test range_fn range_term
+%type <inter_code> prog_start input_file statement simple_statement next_simple_statement small_statement import_statement expr_statement assignment_statement assignment_expr or_test and_test not_test comparison arith_exp arith_exp2 factor term constant compound_statement if_statement test suite suite_for suite1 repeat_statement elif_statement optional_else for_statement 
+
+%type <text> list_index exprlist first_exprlist last_exprlist range_term
+
+%type <range_icg> testlist range_fn
 
 
 %right T_assignment
@@ -68,121 +83,748 @@ extern "C"
 
 %%
 
+prog_start : input_file
+             {
+                $$.code = $1.code;
+                printf("\n\n\n\nGenerated Intermediate Code: \n\n%s\n\n\n",$1.code);
+             }
+             ;
+
 input_file  : T_Newline input_file 
-              {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
+              {
+                // vector<string> temp1{$1,$2}; 
+                // $$ = conversion(temp1);
+
+                $$.code = $2.code;
+                $$.addr = $2.addr;
+                $$.true_l = $2.true_l;
+                $$.false_l = $2.false_l;
+
+                #if DEBUG
+                printf("\n\ninside input file newline(stmt):\n\n");
+                printf("$2:\n%s\n",$2.code);
+                #endif
+
+                
+
+                //printf("\n\n\n\n1. Generated Intermediate Code: \n %s\n\n\n",$$.code);
+
+              }
             | statement input_file
-              {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
-            | {;}
+              {
+                // vector<string> temp1{$1,$2}; 
+                // $$ = conversion(temp1);
+
+                vector<string> gen_int_code{$1.code,$2.code};
+                $$.code = conversion(gen_int_code);
+
+                #if DEBUG
+                printf("\n\ninside input file(stmt):\n\n");
+                printf("$1:\n%s\n",$1.code);
+                printf("$2:\n%s\n",$2.code);
+                #endif
+
+                
+                $$.addr = $2.addr;
+                $$.true_l = $2.true_l;
+                $$.false_l = $2.false_l;
+
+                //printf("\n\n\n\n2. Generated Intermediate Code: \n %s\n\n\n",$$.code);
+
+              }
+            | {
+                #if DEBUG
+                printf("\n\ninside input file blank(stmt):\n\n");
+                printf("$$:\n%s\n",$$.code);
+                #endif
+
+                $$.code = empty_string;
+                $$.addr = "";
+                $$.true_l = "";
+                $$.false_l = "";
+                //printf("\n\n\n3. Generated Intermediate Code: \n %s\n\n",$$.code);
+              }
             ;
 
 statement   : simple_statement
+              {
+                $$.code = $1.code;
+                $$.addr = $1.addr;
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+              }
+
             | compound_statement
+              {
+                $$.code = $1.code;
+                $$.addr = $1.addr;
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+
+                #if DEBUG
+                printf("\n\ninside stmt (compound stmt):\n\n");
+                printf("%s\n",$$.code);
+                #endif
+
+              }
             ;
 
 simple_statement   : small_statement next_simple_statement
-                     {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
+                     {
+                      //  vector<string> temp1{$1,$2}; 
+                      //  $$ = conversion(temp1);
+
+                      vector<string> gen_int_code{$1.code,$2.code};
+                      $$.code = conversion(gen_int_code);
+
+                      $$.addr = $1.addr;
+                      $$.true_l = $1.true_l;
+                      $$.false_l = $1.false_l;
+
+                      //printf("\n\n\n\nsimple_stmt Generated Intermediate Code: \n %s\n\n\n",$$.code);
+
+                     }
                    ;
 
 next_simple_statement   : T_Newline
+                          {
+                            $$.code = "";
+                            $$.addr = "";
+                            $$.true_l = "";
+                            $$.false_l = "";
+
+                          }
+
                         | T_semicolon T_Newline
-                          {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
+                          {
+                            // vector<string> temp1{$1,$2}; 
+                            // $$ = conversion(temp1);
+
+                            $$.code = "";
+                            $$.addr = "";
+                            $$.true_l = "";
+                            $$.false_l = "";
+
+                          }
+
                         | T_semicolon small_statement next_simple_statement
-                          {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+                          {
+                            // vector<string> temp1{$1,$2,$3}; 
+                            // $$ = conversion(temp1);
+
+                            vector<string> gen_int_code{$2.code,$3.code};
+                            $$.code = conversion(gen_int_code);
+
+                            $$.addr = $2.addr;
+                            $$.true_l = $2.true_l;
+                            $$.false_l = $2.false_l;
+
+                          }
                     
                         ;
 
 
 small_statement   : expr_statement
+                    {
+                      $$.code = $1.code;
+                      $$.addr = $1.addr;
+                      $$.true_l = $1.true_l;
+                      $$.false_l = $1.false_l;
+
+                    }
+
                   | import_statement
+                    {
+                      $$.code = $1.code;
+                      $$.addr = $1.addr;
+                      $$.true_l = $1.true_l;
+                      $$.false_l = $1.false_l;
+
+                    }
                   ;
 
 import_statement   : T_import T_identifier
-                     {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
+                     {
+                       vector<string> temp1{$1,$2}; 
+                       $$.code = conversion(temp1);
+
+                       $$.addr = "";
+                       $$.true_l = "";
+                       $$.false_l = "";
+                       
+                     }
                    ;
 
 expr_statement   : assignment_statement
+                  {
+                    $$.code = $1.code;
+                    $$.addr = $1.addr;
+                    $$.true_l = $1.true_l;
+                    $$.false_l = $1.false_l;
+
+                    //printf("\n\n\n\n expr Generated Intermediate Code: \n %s\n\n\n",$$.code);
+
+                  }
+
                  | or_test
+                  {
+                    $$.code = $1.code;
+                    $$.addr = $1.addr;
+                    $$.true_l = $1.true_l;
+                    $$.false_l = $1.false_l;
+
+                  }
                  ;
 
 assignment_statement    : T_identifier T_assignment assignment_expr
                           {
                                 if(!test.declaration_exists($1, scope_count))
                                 {
-                                    test.insert($1, @1.first_line, $3, scope_count, @1.first_column);
+                                    test.insert($1, @1.first_line, $3.code, scope_count, @1.first_column);
                                 }
                                 else
                                 {
-                                    int temp2 = test.update_identifier($1, scope_count, $3);
+                                    int temp2 = test.update_identifier($1, scope_count, $3.code);
                                 }
 
-                                vector<string> temp1{$1,$2,$3}; 
-                                $$ = conversion(temp1); 
-                              
+                                //vector<string> temp1{$1,$2,$3}; 
+                                //$$ = conversion(temp1); 
+
+                                vector<string> gen_int_code{$3.code,$1,$2,$3.addr,"\n"};
+                                $$.code = conversion(gen_int_code);
+
+                                $$.addr = $3.addr;
+                                $$.true_l = $3.true_l;
+                                $$.false_l = $3.false_l;
+
                           }
                         ;
 
-assignment_expr : or_test {$$ = $1;}
+assignment_expr : or_test 
+                  {
+                    $$.code = $1.code;
+                    $$.addr = $1.addr;
+                    $$.true_l = $1.true_l;
+                    $$.false_l = $1.false_l;
+                  }
+
                 | T_list T_left_par T_right_par 
-                  {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+                  {
+                    vector<string> temp1{$1,$2,$3}; 
+                    $$.code = conversion(temp1);
+                    $$.addr = "";
+                    $$.true_l = "";
+                    $$.false_l = "";
+
+                  }
+
                 | T_left_sq_b T_right_sq_b
-                  {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
+                  {
+                    vector<string> temp1{$1,$2}; 
+                    $$.code = conversion(temp1);
+                    $$.addr = "";
+                    $$.true_l = "";
+                    $$.false_l = "";
+
+                  }
                 ;
 
-or_test   : T_left_par or_test T_right_par 
-            {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
-          | or_test T_or and_test 
-            {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
-          | and_test {$$ = $1;}
+or_test   : or_test T_or and_test 
+            {
+              // vector<string> temp1{$1,$2,$3}; 
+              // $$ = conversion(temp1);
+
+              $$.addr = $1.addr;
+
+              vector<string> gen_int_code{$1.code,$1.false_l,":\n",$3.code,"\n"};
+              $$.code = conversion(gen_int_code);
+
+              vector<string> label_t_temp{$3.true_l,":\n",$1.true_l};
+              $$.true_l = conversion(label_t_temp);
+
+              $$.false_l = $3.false_l;
+
+            }
+          | and_test 
+            {
+              $$.code = $1.code;
+              $$.addr = $1.addr;
+              $$.true_l = $1.true_l;
+              $$.false_l = $1.false_l;
+            }
           ;
 
 and_test   : and_test T_and not_test 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
-           | not_test {$$ = $1;}
+            {
+              // vector<string> temp1{$1,$2,$3}; 
+              // $$ = conversion(temp1);
+
+              $$.addr = $1.addr;
+
+              vector<string> gen_int_code{$1.code,$1.true_l,":\n",$3.code,"\n"};
+              $$.code = conversion(gen_int_code);
+
+              vector<string> label_t_temp{$3.false_l,":\n",$1.false_l};
+              $$.false_l = conversion(label_t_temp);
+
+              $$.true_l = $3.true_l;
+
+
+            }
+           | not_test 
+            {
+              $$.code = $1.code;
+              $$.addr = $1.addr;
+              $$.true_l = $1.true_l;
+              $$.false_l = $1.false_l;
+            }
            ;
 
-not_test   : not_test T_not comparison 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
-           | comparison {$$ = $1;}
+not_test   : T_not not_test 
+            {
+              // vector<string> temp1{$1,$2,$3}; 
+              // $$ = conversion(temp1);
+
+              $$.false_l = $2.true_l;
+              $$.true_l = $2.false_l;
+              $$.code = $2.code;
+              $$.addr = $2.addr;
+              
+            }
+
+           | comparison 
+            {
+              $$.code = $1.code;
+              $$.addr = $1.addr;
+              $$.true_l = $1.true_l;
+              $$.false_l = $1.false_l;
+            }
            ;
 
 comparison  : comparison T_LT arith_exp 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp_l = to_string(label_no);
+                string l_no = "L";
+                temp_l = l_no + temp_l;
+                char *t2 = new char[temp_l.size() + 1];
+                copy(temp_l.begin(),temp_l.end(), t2);
+
+                ++label_no;
+                
+                $$.true_l = t2;
+
+                string temp_l_2 = to_string(label_no);
+                string l_no_2 = "L";
+                temp_l_2 = l_no_2 + temp_l_2;
+                char *t3 = new char[temp_l_2.size() + 1];
+                copy(temp_l_2.begin(),temp_l_2.end(), t3);
+
+                ++label_no;
+                
+                $$.false_l = t3;
+
+                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.addr = $1.addr;
+
+              }
+
             | comparison T_GT arith_exp 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp_l = to_string(label_no);
+                string l_no = "L";
+                temp_l = l_no + temp_l;
+                char *t2 = new char[temp_l.size() + 1];
+                copy(temp_l.begin(),temp_l.end(), t2);
+
+                ++label_no;
+                
+                $$.true_l = t2;
+
+                string temp_l_2 = to_string(label_no);
+                string l_no_2 = "L";
+                temp_l_2 = l_no_2 + temp_l_2;
+                char *t3 = new char[temp_l_2.size() + 1];
+                copy(temp_l_2.begin(),temp_l_2.end(), t3);
+
+                ++label_no;
+                
+                $$.false_l = t3;
+
+                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                #if DEBUG
+                printf("\n\ninside comparison (GT):\n\n");
+                printf("%s\n",$$.code);
+                #endif
+
+                $$.addr = $1.addr;
+
+              }
+
             | comparison T_EQ arith_exp 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp_l = to_string(label_no);
+                string l_no = "L";
+                temp_l = l_no + temp_l;
+                char *t2 = new char[temp_l.size() + 1];
+                copy(temp_l.begin(),temp_l.end(), t2);
+
+                ++label_no;
+                
+                $$.true_l = t2;
+
+                string temp_l_2 = to_string(label_no);
+                string l_no_2 = "L";
+                temp_l_2 = l_no_2 + temp_l_2;
+                char *t3 = new char[temp_l_2.size() + 1];
+                copy(temp_l_2.begin(),temp_l_2.end(), t3);
+
+                ++label_no;
+                
+                $$.false_l = t3;
+
+                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.addr = $1.addr;
+
+              }
+
             | comparison T_GTE arith_exp 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp_l = to_string(label_no);
+                string l_no = "L";
+                temp_l = l_no + temp_l;
+                char *t2 = new char[temp_l.size() + 1];
+                copy(temp_l.begin(),temp_l.end(), t2);
+
+                ++label_no;
+                
+                $$.true_l = t2;
+
+                string temp_l_2 = to_string(label_no);
+                string l_no_2 = "L";
+                temp_l_2 = l_no_2 + temp_l_2;
+                char *t3 = new char[temp_l_2.size() + 1];
+                copy(temp_l_2.begin(),temp_l_2.end(), t3);
+
+                ++label_no;
+                
+                $$.false_l = t3;
+                
+
+                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.addr = $1.addr;
+              
+              }
+
             | comparison T_LTE arith_exp 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp_l = to_string(label_no);
+                string l_no = "L";
+                temp_l = l_no + temp_l;
+                char *t2 = new char[temp_l.size() + 1];
+                copy(temp_l.begin(),temp_l.end(), t2);
+
+                ++label_no;
+                
+                $$.true_l = t2;
+
+                string temp_l_2 = to_string(label_no);
+                string l_no_2 = "L";
+                temp_l_2 = l_no_2 + temp_l_2;
+                char *t3 = new char[temp_l_2.size() + 1];
+                copy(temp_l_2.begin(),temp_l_2.end(), t3);
+
+                ++label_no;
+                
+                $$.false_l = t3;
+
+                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.addr = $1.addr;
+              
+              }
+
             | comparison T_NEQ arith_exp 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp_l = to_string(label_no);
+                string l_no = "L";
+                temp_l = l_no + temp_l;
+                char *t2 = new char[temp_l.size() + 1];
+                copy(temp_l.begin(),temp_l.end(), t2);
+
+                ++label_no;
+                
+                $$.true_l = t2;
+
+                string temp_l_2 = to_string(label_no);
+                string l_no_2 = "L";
+                temp_l_2 = l_no_2 + temp_l_2;
+                char *t3 = new char[temp_l_2.size() + 1];
+                copy(temp_l_2.begin(),temp_l_2.end(), t3);
+
+                ++label_no;
+                
+                $$.false_l = t3;
+
+                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.addr = $1.addr;
+              
+              }
+
             | comparison T_in arith_exp 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
-            | arith_exp {$$ = $1;}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp_l = to_string(label_no);
+                string l_no = "L";
+                temp_l = l_no + temp_l;
+                char *t2 = new char[temp_l.size() + 1];
+                copy(temp_l.begin(),temp_l.end(), t2);
+
+                ++label_no;
+                
+                $$.true_l = t2;
+
+                string temp_l_2 = to_string(label_no);
+                string l_no_2 = "L";
+                temp_l_2 = l_no_2 + temp_l_2;
+                char *t3 = new char[temp_l_2.size() + 1];
+                copy(temp_l_2.begin(),temp_l_2.end(), t3);
+
+                ++label_no;
+                
+                $$.false_l = t3;
+
+                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.addr = $1.addr;
+              
+              }
+
+            | arith_exp 
+              {
+                $$.code = $1.code;
+                $$.addr = $1.addr;
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+
+              }
             ;
 
 arith_exp   : arith_exp T_plus arith_exp2 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+              {
+                //vector<string> temp1{$1,$2,$3}; 
+                //$$ = conversion(temp1);
+
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t2 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t2);
+
+                $$.addr = t2;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+
+              }
             | arith_exp T_minus arith_exp2 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
-            | arith_exp2 {$$ = $1;}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t2 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t2);
+
+                $$.addr = t2;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+
+
+              }
+            | arith_exp2 
+              {
+                $$.code = $1.code;
+                $$.addr = $1.addr;
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+              }
             ;
 
 arith_exp2  : arith_exp2 T_star factor 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t2 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t2);
+
+                $$.addr = t2;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+
+              }
+
             | arith_exp2 T_divide factor 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t2 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t2);
+
+                $$.addr = t2;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+
+              }
+
             | arith_exp2 T_modulus factor 
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
-            | factor {$$ = $1;}
+              {
+                // vector<string> temp1{$1,$2,$3}; 
+                // $$ = conversion(temp1);
+
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t2 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t2);
+
+                $$.addr = t2;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                $$.code = conversion(gen_int_code);
+
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+
+              }
+
+            | factor 
+              {
+                $$.code = $1.code;
+                $$.addr = $1.addr;
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+              }
             ;
 
 factor  : T_plus factor
-          { vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
+          { 
+            // vector<string> temp1{$1,$2}; 
+            // $$ = conversion(temp1);
+
+            string temp = to_string(temp_no);
+            string t_no = "t";
+            temp = t_no + temp;
+            char *t2 = new char[temp.size() + 1];
+            copy(temp.begin(),temp.end(), t2);
+
+            $$.addr = t2;
+
+            ++temp_no;
+
+            vector<string> gen_int_code{$2.code,temp,"=",$1,$2.addr,"\n"};
+            $$.code = conversion(gen_int_code);
+
+            $$.true_l = $2.true_l;
+            $$.false_l = $2.false_l;
+
+          }
+
         | T_minus factor
-          {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
-        | term {$$ = $1;}
+          {
+            // vector<string> temp1{$1,$2}; 
+            // $$ = conversion(temp1);
+
+            string temp = to_string(temp_no);
+            string t_no = "t";
+            temp = t_no + temp;
+            char *t2 = new char[temp.size() + 1];
+            copy(temp.begin(),temp.end(), t2);
+
+            $$.addr = t2;
+
+            ++temp_no;
+
+            vector<string> gen_int_code{$2.code,temp,"=",$1,$2.addr,"\n"};
+            $$.code = conversion(gen_int_code);
+
+            $$.true_l = $2.true_l;
+            $$.false_l = $2.false_l;
+            
+          }
+        | term 
+          {
+            $$.code = $1.code;
+            $$.addr = $1.addr;
+            $$.true_l = $1.true_l;
+            $$.false_l = $1.false_l;
+          }
         ;
 
 term    : T_identifier
@@ -193,17 +835,102 @@ term    : T_identifier
                   printf("\n\nvariable \'%s\' not declared before\n\n\n",$1);
                   yyerror("Undeclared variable");
               }
-              $$ = $1;
+              $$.addr = $1;
+              $$.code = $1;
+              $$.true_l = "";
+              $$.false_l = "";
 
           }
-        | constant {$$ = $1;}
-        | list_index {$$ = $1;}
+        | constant 
+          {
+            $$.code = $1.code;
+            $$.addr = $1.addr;
+            $$.true_l = $1.true_l;
+            $$.false_l = $1.false_l;
+
+          }
+
+        | list_index 
+          {
+            $$.code = $1;
+            $$.addr = "";
+            $$.true_l = "";
+            $$.false_l = "";
+
+          }
+
+        | T_left_par or_test T_right_par 
+          {
+            // vector<string> temp1{$1,$2,$3}; 
+            // $$ = conversion(temp1);
+
+            $$.code = $2.code;
+            $$.addr = $2.addr;
+            $$.true_l = $2.true_l;
+            $$.false_l = $2.false_l;
+
+          }
         ;
 
-constant    : T_number {$$ = $1;}
-            | T_string {$$ = $1;}
-            | T_True {$$ = $1;}
-            | T_False {$$ = $1;}
+constant    : T_number 
+              {
+                $$.addr = $1;
+                $$.code = $1;
+                $$.true_l = "";
+                $$.false_l = "";
+
+              }
+
+            | T_string 
+              {
+                $$.addr = $1;
+                $$.code = $1;
+                $$.true_l = "";
+                $$.false_l = "";
+
+              }
+
+            | T_True
+              {
+                $$.addr = $1;
+
+                string temp_l = to_string(label_no);
+                string l_no = "L";
+                temp_l = l_no + temp_l;
+                char *t2 = new char[temp_l.size() + 1];
+                copy(temp_l.begin(),temp_l.end(), t2);
+
+                ++label_no;
+                
+                $$.true_l = t2;
+
+                $$.false_l = "";
+
+                vector<string> gen_int_code{"goto",$$.true_l,"\n"};
+                $$.code = conversion(gen_int_code);
+
+              }  
+
+            | T_False
+              {
+                $$.addr = $1;
+
+                $$.true_l = "";
+
+                string temp_l = to_string(label_no);
+                string l_no = "L";
+                temp_l = l_no + temp_l;
+                char *t2 = new char[temp_l.size() + 1];
+                copy(temp_l.begin(),temp_l.end(), t2);
+
+                ++label_no;
+                
+                $$.false_l = t2;
+
+                vector<string> gen_int_code{"goto",$$.false_l,"\n"};
+                $$.code = conversion(gen_int_code);
+
+              }
             ;
 
 list_index  : T_identifier T_left_sq_b or_test T_right_sq_b
@@ -216,7 +943,7 @@ list_index  : T_identifier T_left_sq_b or_test T_right_sq_b
 
                 }
 
-                vector<string> temp1{$1,$2,$3,$4}; 
+                vector<string> temp1{$1,$2,$3.code,$4}; 
                 $$ = conversion(temp1);
                   
               }
@@ -224,56 +951,280 @@ list_index  : T_identifier T_left_sq_b or_test T_right_sq_b
 
 
 compound_statement  : if_statement
+                      {
+                        $$.code = $1.code;
+                        $$.addr = $1.addr;
+                        $$.true_l = $1.true_l;
+                        $$.false_l = $1.false_l;
+
+                        #if DEBUG
+                        printf("\n\ninside compound statement(if):\n\n");
+                        printf("%s\n\n",$$.code);
+                        #endif
+                      }
+
                     | for_statement
+                      {
+                        $$.code = $1.code;
+                        $$.addr = $1.addr;
+                        $$.true_l = $1.true_l;
+                        $$.false_l = $1.false_l;
+                      }
                     ;
 
 if_statement    : T_if test T_colon suite elif_statement optional_else
+                  {
+                    string temp_l = to_string(label_no);
+                    string l_no = "L";
+                    temp_l = l_no + temp_l;
+                    char *t2 = new char[temp_l.size() + 1];
+                    copy(temp_l.begin(),temp_l.end(), t2);
+
+                    ++label_no;
+                
+                    $$.true_l = t2;
+
+                    int ret_elif = strcmp($5.code,"");
+                    int ret_else = strcmp($6.code,"");
+
+                    //there exists both elif and else statements
+                    if(ret_elif!=0 && ret_else!=0)
+                    {
+                      #if DEBUG
+                      printf("\n\n\ntest1\n\n\n");
+                      #endif
+                      vector<string> gen_int_code{$2.code,$2.true_l,":\n",$4.code,"goto ",t2,"\n",$2.false_l,":\n",$5.code,$6.code,t2,":\n"};
+                      $$.code = conversion(gen_int_code);
+                    }
+
+                    //there exists only elif but no else statement
+                    else if(ret_elif!=0 && ret_else==0)
+                    {
+                      #if DEBUG
+                      printf("\n\n\ntest2\n\n\n");
+                      #endif
+                      vector<string> gen_int_code{$2.code,$2.true_l,":\n",$4.code,"goto ",t2,"\n",$2.false_l,":\n",$5.code,"goto ",t2,"\n",t2,":\n"};
+                      $$.code = conversion(gen_int_code);
+                    }
+
+                    //there exists no elif statement but there is an else statement
+                    else if(ret_elif==0 && ret_else!=0)
+                    {
+                      #if DEBUG
+                      printf("\n\n\ntest3\n\n\n");
+                      #endif
+
+                      vector<string> gen_int_code{$2.code,$2.true_l,":\n",$4.code,"goto ",t2,"\n",$2.false_l,":\n",$6.code,t2,":\n"};
+                      $$.code = conversion(gen_int_code);
+
+                      #if DEBUG
+                      printf("\n\ninside if:\n\n");
+                      printf("%s\n",$$.code);
+                      #endif
+
+                    }
+
+                    //both elif and else statements don't exist
+                    else if(ret_elif==0 && ret_else==0)
+                    {
+                      #if DEBUG
+                      printf("\n\n\ntest4\n\n\n");
+                      #endif
+
+                      vector<string> gen_int_code{$2.code,$2.true_l,":\n",$4.code,$2.false_l,":\n"};
+                      $$.code = conversion(gen_int_code);
+
+                      #if DEBUG
+                      printf("\n\ninside if:\n\n");
+                      printf("%s\n",$$.code);
+                      #endif
+
+                    }
+
+                    $$.addr = $2.addr;
+                    $$.false_l = $2.false_l;
+
+                    
+
+
+                    
+                  }
                 ;
 
-test    : or_test optional_if_else
-          {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
+test    : or_test
+          {
+            // vector<string> temp1{$1,$2}; 
+            // $$ = conversion(temp1);
+
+            $$.code = $1.code;
+            $$.addr = $1.addr;
+            $$.true_l = $1.true_l;
+            $$.false_l = $1.false_l;
+
+
+          }
         ;
 
-optional_if_else    : {$$ = empty_string;}
-                    | T_if or_test T_else test
-                      {vector<string> temp1{$1,$2,$3,$4}; $$ = conversion(temp1);}
-                    ;
+
 
 suite   : simple_statement
+          {
+            $$.code = $1.code;
+            $$.addr = $1.addr;
+            $$.true_l = $1.true_l;
+            $$.false_l = $1.false_l;
+          }
+
         | T_Newline T_Indent  
           {
-              scope_count += 1;
-              test.create_map(scope_count);
+            scope_count += 1;
+            test.create_map(scope_count);
           }
           suite1
+          {
+            $$.code = $4.code;
+            $$.addr = $4.addr;
+            $$.true_l = $4.true_l;
+            $$.false_l = $4.false_l;
+          }
         ;
 
 suite_for   : simple_statement
+              {
+                $$.code = $1.code;
+                $$.addr = $1.addr;
+                $$.true_l = $1.true_l;
+                $$.false_l = $1.false_l;
+              }
+
             | T_Newline T_Indent suite1
+              {
+                $$.code = $3.code;
+                $$.addr = $3.addr;
+                $$.true_l = $3.true_l;
+                $$.false_l = $3.false_l;
+              }
             ;
 
 suite1  : statement T_Dedent
           {
               scope_count -= $2;
+
+              $$.code = $1.code;
+              $$.addr = $1.addr;
+              $$.true_l = $1.true_l;
+              $$.false_l = $1.false_l;
+
           }
+
         | statement repeat_statement T_Dedent
           {
               scope_count -= $3;
+
+              vector<string> gen_int_code{$1.code,$2.code,"\n"};
+              $$.code = conversion(gen_int_code);
+
+              $$.addr = $1.addr;
+              $$.true_l = $1.true_l;
+              $$.false_l = $1.false_l;
+
           }
         ;
 
 repeat_statement    : statement repeat_statement
+                      {
+                        vector<string> gen_int_code{$1.code,$2.code,"\n"};
+                        $$.code = conversion(gen_int_code);
+
+                        $$.addr = $1.addr;
+                        $$.true_l = $1.true_l;
+                        $$.false_l = $1.false_l;
+                      }
+
                     | statement
+                      {
+                        $$.code = $1.code;
+                        $$.addr = $1.addr;
+                        $$.true_l = $1.true_l;
+                        $$.false_l = $1.false_l;
+                      }
+
                     | T_Newline repeat_statement
+                      {
+                        $$.code = $2.code;
+                        $$.addr = $2.addr;
+                        $$.true_l = $2.true_l;
+                        $$.false_l = $2.false_l;
+                      }
+
                     | T_Newline
+                      {
+                        $$.code = "";
+                        $$.addr = "";
+                        $$.true_l = "";
+                        $$.false_l = "";
+                      }
                     ;
 
-elif_statement  : {$$ = empty_string;}
+elif_statement  : {
+                    $$.code = "";
+                    $$.addr = "";
+                    $$.true_l = "";
+                    $$.false_l = "";
+
+                  }
+
                 | T_elif test T_colon suite elif_statement
+                  {
+
+                    string temp_l = to_string(label_no);
+                    string l_no = "L";
+                    temp_l = l_no + temp_l;
+                    char *t2 = new char[temp_l.size() + 1];
+                    copy(temp_l.begin(),temp_l.end(), t2);
+
+
+                    //no more elif statements
+                    if(strcmp($5.code,"")==0)
+                    {
+                      vector<string> gen_int_code{$2.code,$2.true_l,":\n",$4.code,"goto ",t2,"\n",$2.false_l,":\n"};
+                      $$.code = conversion(gen_int_code);
+                      $$.addr = "";
+                      $$.true_l = "";
+                      $$.false_l = "";
+
+                    }
+
+                    //contains more elif statements
+                    else
+                    {
+                      vector<string> gen_int_code{$2.code,$2.true_l,":\n",$4.code,"goto ",t2,"\n",$2.false_l,":\n",$5.code};
+                      $$.code = conversion(gen_int_code);
+                      $$.addr = "";
+                      $$.true_l = "";
+                      $$.false_l = "";
+
+                    }
+
+                  }
                 ;
 
-optional_else   : {$$ = empty_string;}
+optional_else :   {
+                    $$.code = "";
+                    $$.addr = "";
+                    $$.true_l = "";
+                    $$.false_l = "";
+
+                  }
+
                 | T_else T_colon suite
+                  {
+                    $$.code = $3.code;
+                    $$.addr = $3.addr;
+                    $$.true_l = $3.true_l;
+                    $$.false_l = $3.false_l;
+
+                  }
                 ;
 
 for_statement   : T_for  
@@ -281,7 +1232,32 @@ for_statement   : T_for
                     scope_count += 1;
                     test.create_map(scope_count);
                   }
-                  exprlist T_in testlist T_colon suite_for optional_else
+                  exprlist T_in testlist T_colon suite_for
+                  {
+                    string temp_l = to_string(label_no);
+                    string l_no = "L";
+                    temp_l = l_no + temp_l;
+                    char *t2 = new char[temp_l.size() + 1];
+                    copy(temp_l.begin(),temp_l.end(), t2);
+
+                    ++label_no;
+
+                    string temp_l_2 = to_string(label_no);
+                    string l_no_2 = "L";
+                    temp_l_2 = l_no_2 + temp_l_2;
+                    char *t3 = new char[temp_l_2.size() + 1];
+                    copy(temp_l_2.begin(),temp_l_2.end(), t3);
+
+                    ++label_no;
+
+                    vector<string> gen_int_code{$3,"=",$5.start_r,"\n",t2,":\n",$7.code,$3," = ",$3," + ",$5.step_r,"\n","if ",$3," < ",$5.end_r," goto ",t2,"\ngoto ",t3,"\n",t3,":\n"};
+                    $$.code = conversion(gen_int_code);
+
+                    $$.addr = "";
+                    $$.true_l = "";
+                    $$.false_l = "";
+
+                  }
                 ;
 
 exprlist    : first_exprlist last_exprlist 
@@ -290,31 +1266,61 @@ exprlist    : first_exprlist last_exprlist
 first_exprlist  : T_identifier
                   {
                     test.insert($1, @1.first_line, "" , scope_count, @1.first_column);
+                    $$ = $1;
                   }
                 ;
 
 last_exprlist   : {$$ = empty_string;}
                 | T_comma
                 | T_comma first_exprlist last_exprlist
+                  {
+                    $$ = $2;
+                  }
                 ;
 
-testlist    : test repeat_test
-              {vector<string> temp1{$1,$2}; $$ = conversion(temp1);}
-            | range_fn
+testlist    : range_fn
+              {
+                $$.start_r = $1.start_r;
+                $$.end_r = $1.end_r;
+                $$.step_r = $1.step_r;
+
+              }
             ;
 
-repeat_test : {$$ = empty_string;}
-            | T_comma
-            | T_comma test repeat_test
-              {vector<string> temp1{$1,$2,$3}; $$ = conversion(temp1);}
-            ;
+
 
 range_fn : T_range T_left_par range_term T_right_par
-           {vector<string> temp1{$1,$2,$3,$4}; $$ = conversion(temp1);}
+           {
+            //  vector<string> temp1{$1,$2,$3,$4}; 
+            //  $$ = conversion(temp1);
+
+            $$.start_r = "0";
+            $$.end_r = $3;
+            $$.step_r = "1";
+
+           }
+
          | T_range T_left_par range_term T_comma range_term T_right_par
-           {vector<string> temp1{$1,$2,$3,$4,$5,$6}; $$ = conversion(temp1);}
+           {
+            //  vector<string> temp1{$1,$2,$3,$4,$5,$6}; 
+            //  $$ = conversion(temp1);
+
+            $$.start_r = $3;
+            $$.end_r = $5;
+            $$.step_r = "1";
+
+           }
+
          | T_range T_left_par range_term T_comma range_term T_comma range_term T_right_par
-           {vector<string> temp1{$1,$2,$3,$4,$5,$6,$7,$8}; $$ = conversion(temp1);}
+           {
+            //  vector<string> temp1{$1,$2,$3,$4,$5,$6,$7,$8}; 
+            //  $$ = conversion(temp1);
+
+            $$.start_r = $3;
+            $$.end_r = $5;
+            $$.step_r = $7;
+
+           }
          ;
 
 range_term  : T_identifier
@@ -325,12 +1331,20 @@ range_term  : T_identifier
                       printf("\n\nvariable \'%s\' not declared before\n",$1);
                       yyerror("Undeclared Variable");
                       
-
                   }
+
                   $$ = $1;
               }
+
             | T_number
+              {
+                $$ = $1;
+              }
+
             | list_index
+              {
+                $$ = $1;
+              }
             ;
 
 
