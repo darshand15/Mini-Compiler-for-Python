@@ -7,7 +7,7 @@
 #include "test1.hpp"
 #include <vector>
 
-#define DEBUG 0
+#define DEBUG 1
 
 using namespace std;
 symbol_table test;
@@ -19,6 +19,8 @@ char *empty_string = strdup("");
 
 
 extern my_stack_t *ptr_my_stack;
+
+quadruple_t *ptr_quad;
 
 void yyerror(const char *error_msg);
 
@@ -51,9 +53,9 @@ extern "C"
     int indentation_level;
     char *text;
 
-    struct s1 {char *addr; char *code; char *true_l; char *false_l;} inter_code;
+    struct s1 {char *addr; char *code; char *true_l; char *false_l; char *sym_tab_info;} inter_code;
 
-    struct s2 {char *start_r; char *end_r; char *step_r;} range_icg;
+    struct s2 {char *start_r; char *end_r; char *step_r; char *sym_tab_info;} range_icg;
 
 }
 
@@ -99,6 +101,7 @@ input_file  : T_Newline input_file
                 $$.addr = $2.addr;
                 $$.true_l = $2.true_l;
                 $$.false_l = $2.false_l;
+                $$.sym_tab_info = $2.sym_tab_info;
 
                 #if DEBUG
                 printf("\n\ninside input file newline(stmt):\n\n");
@@ -106,7 +109,6 @@ input_file  : T_Newline input_file
                 #endif
 
                 
-
                 //printf("\n\n\n\n1. Generated Intermediate Code: \n %s\n\n\n",$$.code);
 
               }
@@ -129,6 +131,9 @@ input_file  : T_Newline input_file
                 $$.true_l = $2.true_l;
                 $$.false_l = $2.false_l;
 
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
+
                 //printf("\n\n\n\n2. Generated Intermediate Code: \n %s\n\n\n",$$.code);
 
               }
@@ -142,6 +147,8 @@ input_file  : T_Newline input_file
                 $$.addr = "";
                 $$.true_l = "";
                 $$.false_l = "";
+                $$.sym_tab_info = "";
+
                 //printf("\n\n\n3. Generated Intermediate Code: \n %s\n\n",$$.code);
               }
             ;
@@ -152,6 +159,8 @@ statement   : simple_statement
                 $$.addr = $1.addr;
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+                $$.sym_tab_info = $1.sym_tab_info;
+
               }
 
             | compound_statement
@@ -160,6 +169,7 @@ statement   : simple_statement
                 $$.addr = $1.addr;
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+                $$.sym_tab_info = $1.sym_tab_info;
 
                 #if DEBUG
                 printf("\n\ninside stmt (compound stmt):\n\n");
@@ -181,6 +191,9 @@ simple_statement   : small_statement next_simple_statement
                       $$.true_l = $1.true_l;
                       $$.false_l = $1.false_l;
 
+                      vector<string> temp_sym_tab{$1.sym_tab_info,$2.sym_tab_info};
+                      $$.sym_tab_info = conversion(temp_sym_tab);
+
                       //printf("\n\n\n\nsimple_stmt Generated Intermediate Code: \n %s\n\n\n",$$.code);
 
                      }
@@ -192,6 +205,8 @@ next_simple_statement   : T_Newline
                             $$.addr = "";
                             $$.true_l = "";
                             $$.false_l = "";
+                            $$.sym_tab_info = "";
+
 
                           }
 
@@ -204,6 +219,8 @@ next_simple_statement   : T_Newline
                             $$.addr = "";
                             $$.true_l = "";
                             $$.false_l = "";
+                            $$.sym_tab_info = "";
+
 
                           }
 
@@ -218,6 +235,10 @@ next_simple_statement   : T_Newline
                             $$.addr = $2.addr;
                             $$.true_l = $2.true_l;
                             $$.false_l = $2.false_l;
+                            
+                            vector<string> temp_sym_tab{$2.sym_tab_info,$3.sym_tab_info};
+                            $$.sym_tab_info = conversion(temp_sym_tab);
+
 
                           }
                     
@@ -230,6 +251,8 @@ small_statement   : expr_statement
                       $$.addr = $1.addr;
                       $$.true_l = $1.true_l;
                       $$.false_l = $1.false_l;
+                      $$.sym_tab_info = $1.sym_tab_info;
+
 
                     }
 
@@ -239,6 +262,8 @@ small_statement   : expr_statement
                       $$.addr = $1.addr;
                       $$.true_l = $1.true_l;
                       $$.false_l = $1.false_l;
+                      $$.sym_tab_info = $1.sym_tab_info;
+
 
                     }
                   ;
@@ -251,6 +276,8 @@ import_statement   : T_import T_identifier
                        $$.addr = "";
                        $$.true_l = "";
                        $$.false_l = "";
+                       $$.sym_tab_info = "";
+
                        
                      }
                    ;
@@ -261,6 +288,8 @@ expr_statement   : assignment_statement
                     $$.addr = $1.addr;
                     $$.true_l = $1.true_l;
                     $$.false_l = $1.false_l;
+                    $$.sym_tab_info = $1.sym_tab_info;
+
 
                     //printf("\n\n\n\n expr Generated Intermediate Code: \n %s\n\n\n",$$.code);
 
@@ -272,6 +301,8 @@ expr_statement   : assignment_statement
                     $$.addr = $1.addr;
                     $$.true_l = $1.true_l;
                     $$.false_l = $1.false_l;
+                    $$.sym_tab_info = $1.sym_tab_info;
+
 
                   }
                  ;
@@ -280,11 +311,11 @@ assignment_statement    : T_identifier T_assignment assignment_expr
                           {
                                 if(!test.declaration_exists($1, scope_count))
                                 {
-                                    test.insert($1, @1.first_line, $3.code, scope_count, @1.first_column);
+                                    test.insert($1, @1.first_line, $3.sym_tab_info, scope_count, @1.first_column);
                                 }
                                 else
                                 {
-                                    int temp2 = test.update_identifier($1, scope_count, $3.code);
+                                    int temp2 = test.update_identifier($1, scope_count, $3.sym_tab_info);
                                 }
 
                                 //vector<string> temp1{$1,$2,$3}; 
@@ -293,9 +324,17 @@ assignment_statement    : T_identifier T_assignment assignment_expr
                                 vector<string> gen_int_code{$3.code,$1,$2,$3.addr,"\n"};
                                 $$.code = conversion(gen_int_code);
 
+                                #if DEBUG
+                                printf("\ninside assignment expression: %s\n",$$.code);
+                                #endif
+
                                 $$.addr = $3.addr;
                                 $$.true_l = $3.true_l;
                                 $$.false_l = $3.false_l;
+                                
+                                vector<string> temp_sym_tab{$1,$2,$3.sym_tab_info};
+                                $$.sym_tab_info = conversion(temp_sym_tab);
+
 
                           }
                         ;
@@ -306,6 +345,8 @@ assignment_expr : or_test
                     $$.addr = $1.addr;
                     $$.true_l = $1.true_l;
                     $$.false_l = $1.false_l;
+                    $$.sym_tab_info = $1.sym_tab_info;
+
                   }
 
                 | T_list T_left_par T_right_par 
@@ -315,6 +356,8 @@ assignment_expr : or_test
                     $$.addr = "";
                     $$.true_l = "";
                     $$.false_l = "";
+                    $$.sym_tab_info = $$.code;
+
 
                   }
 
@@ -325,6 +368,7 @@ assignment_expr : or_test
                     $$.addr = "";
                     $$.true_l = "";
                     $$.false_l = "";
+                    $$.sym_tab_info = $$.code;
 
                   }
                 ;
@@ -344,6 +388,9 @@ or_test   : or_test T_or and_test
 
               $$.false_l = $3.false_l;
 
+              vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+              $$.sym_tab_info = conversion(temp_sym_tab);
+
             }
           | and_test 
             {
@@ -351,6 +398,8 @@ or_test   : or_test T_or and_test
               $$.addr = $1.addr;
               $$.true_l = $1.true_l;
               $$.false_l = $1.false_l;
+              $$.sym_tab_info = $1.sym_tab_info;
+
             }
           ;
 
@@ -369,6 +418,9 @@ and_test   : and_test T_and not_test
 
               $$.true_l = $3.true_l;
 
+              vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+              $$.sym_tab_info = conversion(temp_sym_tab);
+
 
             }
            | not_test 
@@ -377,6 +429,8 @@ and_test   : and_test T_and not_test
               $$.addr = $1.addr;
               $$.true_l = $1.true_l;
               $$.false_l = $1.false_l;
+              $$.sym_tab_info = $1.sym_tab_info;
+
             }
            ;
 
@@ -389,6 +443,8 @@ not_test   : T_not not_test
               $$.true_l = $2.false_l;
               $$.code = $2.code;
               $$.addr = $2.addr;
+              vector<string> temp_sym_tab{$1,$2.sym_tab_info};
+              $$.sym_tab_info = conversion(temp_sym_tab);
               
             }
 
@@ -398,6 +454,8 @@ not_test   : T_not not_test
               $$.addr = $1.addr;
               $$.true_l = $1.true_l;
               $$.false_l = $1.false_l;
+              $$.sym_tab_info = $1.sym_tab_info;
+
             }
            ;
 
@@ -430,6 +488,9 @@ comparison  : comparison T_LT arith_exp
                 $$.code = conversion(gen_int_code);
 
                 $$.addr = $1.addr;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
 
               }
 
@@ -468,6 +529,9 @@ comparison  : comparison T_LT arith_exp
 
                 $$.addr = $1.addr;
 
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
+
               }
 
             | comparison T_EQ arith_exp 
@@ -499,6 +563,9 @@ comparison  : comparison T_LT arith_exp
                 $$.code = conversion(gen_int_code);
 
                 $$.addr = $1.addr;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
 
               }
 
@@ -532,6 +599,9 @@ comparison  : comparison T_LT arith_exp
                 $$.code = conversion(gen_int_code);
 
                 $$.addr = $1.addr;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
               
               }
 
@@ -564,6 +634,9 @@ comparison  : comparison T_LT arith_exp
                 $$.code = conversion(gen_int_code);
 
                 $$.addr = $1.addr;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
               
               }
 
@@ -596,6 +669,9 @@ comparison  : comparison T_LT arith_exp
                 $$.code = conversion(gen_int_code);
 
                 $$.addr = $1.addr;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
               
               }
 
@@ -628,6 +704,9 @@ comparison  : comparison T_LT arith_exp
                 $$.code = conversion(gen_int_code);
 
                 $$.addr = $1.addr;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
               
               }
 
@@ -637,6 +716,7 @@ comparison  : comparison T_LT arith_exp
                 $$.addr = $1.addr;
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+                $$.sym_tab_info = $1.sym_tab_info;
 
               }
             ;
@@ -659,8 +739,17 @@ arith_exp   : arith_exp T_plus arith_exp2
                 vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
+
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
 
               }
             | arith_exp T_minus arith_exp2 
@@ -681,8 +770,17 @@ arith_exp   : arith_exp T_plus arith_exp2
                 vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
+
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
 
 
               }
@@ -692,6 +790,7 @@ arith_exp   : arith_exp T_plus arith_exp2
                 $$.addr = $1.addr;
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+                $$.sym_tab_info = $1.sym_tab_info;
               }
             ;
 
@@ -713,8 +812,17 @@ arith_exp2  : arith_exp2 T_star factor
                 vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
+
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
 
               }
 
@@ -736,8 +844,17 @@ arith_exp2  : arith_exp2 T_star factor
                 vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
+
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
 
               }
 
@@ -759,8 +876,17 @@ arith_exp2  : arith_exp2 T_star factor
                 vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
+
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+
+                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
 
               }
 
@@ -770,6 +896,7 @@ arith_exp2  : arith_exp2 T_star factor
                 $$.addr = $1.addr;
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+                $$.sym_tab_info = $1.sym_tab_info;
               }
             ;
 
@@ -791,8 +918,17 @@ factor  : T_plus factor
             vector<string> gen_int_code{$2.code,temp,"=",$1,$2.addr,"\n"};
             $$.code = conversion(gen_int_code);
 
+            string temp_val = string($1) + string($2.addr);
+
+            test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
+
             $$.true_l = $2.true_l;
             $$.false_l = $2.false_l;
+
+            vector<string> temp_sym_tab{$1,$2.sym_tab_info};
+            $$.sym_tab_info = conversion(temp_sym_tab);
+
+            push_quad(ptr_quad, $1, $2.addr, "", t2);
 
           }
 
@@ -814,8 +950,17 @@ factor  : T_plus factor
             vector<string> gen_int_code{$2.code,temp,"=",$1,$2.addr,"\n"};
             $$.code = conversion(gen_int_code);
 
+            string temp_val = string($1) + string($2.addr);
+
+            test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
+
             $$.true_l = $2.true_l;
             $$.false_l = $2.false_l;
+
+            vector<string> temp_sym_tab{$1,$2.sym_tab_info};
+            $$.sym_tab_info = conversion(temp_sym_tab);
+
+            push_quad(ptr_quad, $1, $2.addr, "", t2);
             
           }
         | term 
@@ -824,6 +969,7 @@ factor  : T_plus factor
             $$.addr = $1.addr;
             $$.true_l = $1.true_l;
             $$.false_l = $1.false_l;
+            $$.sym_tab_info = $1.sym_tab_info;
           }
         ;
 
@@ -836,9 +982,10 @@ term    : T_identifier
                   yyerror("Undeclared variable");
               }
               $$.addr = $1;
-              $$.code = $1;
+              $$.code = "";
               $$.true_l = "";
               $$.false_l = "";
+              $$.sym_tab_info = $1;
 
           }
         | constant 
@@ -847,6 +994,7 @@ term    : T_identifier
             $$.addr = $1.addr;
             $$.true_l = $1.true_l;
             $$.false_l = $1.false_l;
+            $$.sym_tab_info = $1.sym_tab_info;
 
           }
 
@@ -856,6 +1004,7 @@ term    : T_identifier
             $$.addr = "";
             $$.true_l = "";
             $$.false_l = "";
+            $$.sym_tab_info = $1;
 
           }
 
@@ -869,24 +1018,29 @@ term    : T_identifier
             $$.true_l = $2.true_l;
             $$.false_l = $2.false_l;
 
+            vector<string> temp_sym_tab{$1,$2.sym_tab_info,$3};
+            $$.sym_tab_info = conversion(temp_sym_tab);
+
           }
         ;
 
 constant    : T_number 
               {
                 $$.addr = $1;
-                $$.code = $1;
+                $$.code = "";
                 $$.true_l = "";
                 $$.false_l = "";
+                $$.sym_tab_info = $1;
 
               }
 
             | T_string 
               {
                 $$.addr = $1;
-                $$.code = $1;
+                $$.code = "";
                 $$.true_l = "";
                 $$.false_l = "";
+                $$.sym_tab_info = $1;
 
               }
 
@@ -909,6 +1063,8 @@ constant    : T_number
                 vector<string> gen_int_code{"goto",$$.true_l,"\n"};
                 $$.code = conversion(gen_int_code);
 
+                $$.sym_tab_info = $1;
+
               }  
 
             | T_False
@@ -929,6 +1085,8 @@ constant    : T_number
 
                 vector<string> gen_int_code{"goto",$$.false_l,"\n"};
                 $$.code = conversion(gen_int_code);
+
+                $$.sym_tab_info = $1;
 
               }
             ;
@@ -956,6 +1114,7 @@ compound_statement  : if_statement
                         $$.addr = $1.addr;
                         $$.true_l = $1.true_l;
                         $$.false_l = $1.false_l;
+                        $$.sym_tab_info = $1.sym_tab_info;
 
                         #if DEBUG
                         printf("\n\ninside compound statement(if):\n\n");
@@ -969,6 +1128,7 @@ compound_statement  : if_statement
                         $$.addr = $1.addr;
                         $$.true_l = $1.true_l;
                         $$.false_l = $1.false_l;
+                        $$.sym_tab_info = $1.sym_tab_info;
                       }
                     ;
 
@@ -1044,7 +1204,7 @@ if_statement    : T_if test T_colon suite elif_statement optional_else
                     $$.addr = $2.addr;
                     $$.false_l = $2.false_l;
 
-                    
+                    $$.sym_tab_info = $2.sym_tab_info;
 
 
                     
@@ -1060,6 +1220,7 @@ test    : or_test
             $$.addr = $1.addr;
             $$.true_l = $1.true_l;
             $$.false_l = $1.false_l;
+            $$.sym_tab_info = $1.sym_tab_info;
 
 
           }
@@ -1073,6 +1234,7 @@ suite   : simple_statement
             $$.addr = $1.addr;
             $$.true_l = $1.true_l;
             $$.false_l = $1.false_l;
+            $$.sym_tab_info = $1.sym_tab_info;
           }
 
         | T_Newline T_Indent  
@@ -1086,6 +1248,7 @@ suite   : simple_statement
             $$.addr = $4.addr;
             $$.true_l = $4.true_l;
             $$.false_l = $4.false_l;
+            $$.sym_tab_info = $4.sym_tab_info;
           }
         ;
 
@@ -1095,6 +1258,7 @@ suite_for   : simple_statement
                 $$.addr = $1.addr;
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
+                $$.sym_tab_info = $1.sym_tab_info;
               }
 
             | T_Newline T_Indent suite1
@@ -1103,6 +1267,7 @@ suite_for   : simple_statement
                 $$.addr = $3.addr;
                 $$.true_l = $3.true_l;
                 $$.false_l = $3.false_l;
+                $$.sym_tab_info = $3.sym_tab_info;
               }
             ;
 
@@ -1114,6 +1279,7 @@ suite1  : statement T_Dedent
               $$.addr = $1.addr;
               $$.true_l = $1.true_l;
               $$.false_l = $1.false_l;
+              $$.sym_tab_info = $1.sym_tab_info;
 
           }
 
@@ -1128,6 +1294,11 @@ suite1  : statement T_Dedent
               $$.true_l = $1.true_l;
               $$.false_l = $1.false_l;
 
+              vector<string> temp_sym_tab{$1.sym_tab_info,$2.sym_tab_info};
+              $$.sym_tab_info = conversion(temp_sym_tab);
+
+              
+
           }
         ;
 
@@ -1139,6 +1310,10 @@ repeat_statement    : statement repeat_statement
                         $$.addr = $1.addr;
                         $$.true_l = $1.true_l;
                         $$.false_l = $1.false_l;
+
+                        vector<string> temp_sym_tab{$1.sym_tab_info,$2.sym_tab_info};
+                        $$.sym_tab_info = conversion(temp_sym_tab);
+
                       }
 
                     | statement
@@ -1147,6 +1322,7 @@ repeat_statement    : statement repeat_statement
                         $$.addr = $1.addr;
                         $$.true_l = $1.true_l;
                         $$.false_l = $1.false_l;
+                        $$.sym_tab_info = $1.sym_tab_info;
                       }
 
                     | T_Newline repeat_statement
@@ -1155,6 +1331,7 @@ repeat_statement    : statement repeat_statement
                         $$.addr = $2.addr;
                         $$.true_l = $2.true_l;
                         $$.false_l = $2.false_l;
+                        $$.sym_tab_info = $2.sym_tab_info;
                       }
 
                     | T_Newline
@@ -1163,6 +1340,8 @@ repeat_statement    : statement repeat_statement
                         $$.addr = "";
                         $$.true_l = "";
                         $$.false_l = "";
+                        $$.sym_tab_info = "";
+
                       }
                     ;
 
@@ -1171,6 +1350,7 @@ elif_statement  : {
                     $$.addr = "";
                     $$.true_l = "";
                     $$.false_l = "";
+                    $$.sym_tab_info = "";
 
                   }
 
@@ -1182,6 +1362,8 @@ elif_statement  : {
                     temp_l = l_no + temp_l;
                     char *t2 = new char[temp_l.size() + 1];
                     copy(temp_l.begin(),temp_l.end(), t2);
+
+                    $$.sym_tab_info = $2.sym_tab_info;
 
 
                     //no more elif statements
@@ -1214,6 +1396,7 @@ optional_else :   {
                     $$.addr = "";
                     $$.true_l = "";
                     $$.false_l = "";
+                    $$.sym_tab_info = "";
 
                   }
 
@@ -1223,6 +1406,7 @@ optional_else :   {
                     $$.addr = $3.addr;
                     $$.true_l = $3.true_l;
                     $$.false_l = $3.false_l;
+                    $$.sym_tab_info = $3.sym_tab_info;
 
                   }
                 ;
@@ -1257,15 +1441,37 @@ for_statement   : T_for
                     $$.true_l = "";
                     $$.false_l = "";
 
+                    #if DEBUG
+                    printf("\nprinting start of range(inside for block action rule: %s\n\n",$5.start_r);
+                    #endif
+
+                    
+
+                    test.insert($3, @3.first_line, $5.start_r , scope_count + 1, @3.first_column);
+
+                    #if DEBUG
+                    printf("scope count%d\n",scope_count);
+                    int temp2 = test.update_identifier($3, scope_count, $5.start_r);
+                    int temp3 = test.declaration_exists($3, scope_count);
+                    printf("\nprinting dec exists: %d\n\n",temp3);
+                    printf("\nprinting identifier: %s\n",$3);
+                    printf("\nprinting return value of updating symbol table %d\n\n",temp2);
+                    #endif
+
+                    $$.sym_tab_info = "";
+                    
+
                   }
                 ;
 
 exprlist    : first_exprlist last_exprlist 
+              {
+                $$ = $1;
+              }
             ;
 
 first_exprlist  : T_identifier
                   {
-                    test.insert($1, @1.first_line, "" , scope_count, @1.first_column);
                     $$ = $1;
                   }
                 ;
@@ -1377,10 +1583,16 @@ int main()
     init(ptr_my_stack);
     push(ptr_my_stack,0);
 
+    ptr_quad = (quadruple_t*)malloc(sizeof(quadruple_t));
+    init_quad(ptr_quad);
+
+
+
 
     if (!yyparse() && flag) 
     {
         printf("\n\n\nParsing is successful\n\n\n");
+        disp_quad(ptr_quad);
     } 
     else 
     {
