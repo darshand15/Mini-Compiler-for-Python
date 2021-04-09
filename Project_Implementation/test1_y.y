@@ -7,7 +7,7 @@
 #include "test1.hpp"
 #include <vector>
 
-#define DEBUG 1
+#define DEBUG 0
 
 using namespace std;
 symbol_table test;
@@ -335,6 +335,8 @@ assignment_statement    : T_identifier T_assignment assignment_expr
                                 vector<string> temp_sym_tab{$1,$2,$3.sym_tab_info};
                                 $$.sym_tab_info = conversion(temp_sym_tab);
 
+                                push_quad(ptr_quad, $2, $3.addr, "", $1);
+
 
                           }
                         ;
@@ -390,6 +392,8 @@ or_test   : or_test T_or and_test
 
               vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
               $$.sym_tab_info = conversion(temp_sym_tab);
+
+              
 
             }
           | and_test 
@@ -484,13 +488,31 @@ comparison  : comparison T_LT arith_exp
                 
                 $$.false_l = t3;
 
-                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t4 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t4);
+
+                $$.addr = t4;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,t4,"=",$1.addr,$2,$3.addr,"\n","if",t4,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                $$.addr = $1.addr;
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t4);
+                push_quad(ptr_quad, "Label", "", "", t2);
+                push_quad(ptr_quad, "if", t4, "", t2);
+                push_quad(ptr_quad, "Label", "", "", t3);
+                push_quad(ptr_quad, "goto", "", "", t3);
 
               }
 
@@ -519,18 +541,31 @@ comparison  : comparison T_LT arith_exp
                 
                 $$.false_l = t3;
 
-                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t4 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t4);
+
+                $$.addr = t4;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,t4,"=",$1.addr,$2,$3.addr,"\n","if",t4,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                #if DEBUG
-                printf("\n\ninside comparison (GT):\n\n");
-                printf("%s\n",$$.code);
-                #endif
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
 
-                $$.addr = $1.addr;
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t4);
+                push_quad(ptr_quad, "Label", "", "", t2);
+                push_quad(ptr_quad, "if", t4, "", t2);
+                push_quad(ptr_quad, "Label", "", "", t3);
+                push_quad(ptr_quad, "goto", "", "", t3);
 
               }
 
@@ -559,13 +594,31 @@ comparison  : comparison T_LT arith_exp
                 
                 $$.false_l = t3;
 
-                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t4 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t4);
+
+                $$.addr = t4;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,t4,"=",$1.addr,$2,$3.addr,"\n","if",t4,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                $$.addr = $1.addr;
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t4);
+                push_quad(ptr_quad, "Label", "", "", t2);
+                push_quad(ptr_quad, "if", t4, "", t2);
+                push_quad(ptr_quad, "Label", "", "", t3);
+                push_quad(ptr_quad, "goto", "", "", t3);
 
               }
 
@@ -593,15 +646,32 @@ comparison  : comparison T_LT arith_exp
                 ++label_no;
                 
                 $$.false_l = t3;
-                
 
-                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t4 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t4);
+
+                $$.addr = t4;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,t4,"=",$1.addr,$2,$3.addr,"\n","if",t4,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                $$.addr = $1.addr;
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t4);
+                push_quad(ptr_quad, "Label", "", "", t2);
+                push_quad(ptr_quad, "if", t4, "", t2);
+                push_quad(ptr_quad, "Label", "", "", t3);
+                push_quad(ptr_quad, "goto", "", "", t3);
               
               }
 
@@ -630,13 +700,31 @@ comparison  : comparison T_LT arith_exp
                 
                 $$.false_l = t3;
 
-                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t4 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t4);
+
+                $$.addr = t4;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,t4,"=",$1.addr,$2,$3.addr,"\n","if",t4,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                $$.addr = $1.addr;
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t4);
+                push_quad(ptr_quad, "Label", "", "", t2);
+                push_quad(ptr_quad, "if", t4, "", t2);
+                push_quad(ptr_quad, "Label", "", "", t3);
+                push_quad(ptr_quad, "goto", "", "", t3);
               
               }
 
@@ -665,13 +753,31 @@ comparison  : comparison T_LT arith_exp
                 
                 $$.false_l = t3;
 
-                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t4 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t4);
+
+                $$.addr = t4;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,t4,"=",$1.addr,$2,$3.addr,"\n","if",t4,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                $$.addr = $1.addr;
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t4);
+                push_quad(ptr_quad, "Label", "", "", t2);
+                push_quad(ptr_quad, "if", t4, "", t2);
+                push_quad(ptr_quad, "Label", "", "", t3);
+                push_quad(ptr_quad, "goto", "", "", t3);
               
               }
 
@@ -700,13 +806,31 @@ comparison  : comparison T_LT arith_exp
                 
                 $$.false_l = t3;
 
-                vector<string> gen_int_code{$1.code,$3.code,"if",$1.addr,$2,$3.addr,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
+                string temp = to_string(temp_no);
+                string t_no = "t";
+                temp = t_no + temp;
+                char *t4 = new char[temp.size() + 1];
+                copy(temp.begin(),temp.end(), t4);
+
+                $$.addr = t4;
+
+                ++temp_no;
+
+                vector<string> gen_int_code{$1.code,$3.code,t4,"=",$1.addr,$2,$3.addr,"\n","if",t4,"goto",$$.true_l,"\n","goto",$$.false_l,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                $$.addr = $1.addr;
+                string temp_val = string($1.addr) + string($2) + string($3.addr);
+
+                test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
+
+                push_quad(ptr_quad, $2, $1.addr, $3.addr, t4);
+                push_quad(ptr_quad, "Label", "", "", t2);
+                push_quad(ptr_quad, "if", t4, "", t2);
+                push_quad(ptr_quad, "Label", "", "", t3);
+                push_quad(ptr_quad, "goto", "", "", t3);
               
               }
 
@@ -1063,6 +1187,9 @@ constant    : T_number
                 vector<string> gen_int_code{"goto",$$.true_l,"\n"};
                 $$.code = conversion(gen_int_code);
 
+                push_quad(ptr_quad, "Label", "", "", t2);
+                push_quad(ptr_quad, "goto", "", "", t2);
+
                 $$.sym_tab_info = $1;
 
               }  
@@ -1085,6 +1212,9 @@ constant    : T_number
 
                 vector<string> gen_int_code{"goto",$$.false_l,"\n"};
                 $$.code = conversion(gen_int_code);
+
+                push_quad(ptr_quad, "Label", "", "", t2);
+                push_quad(ptr_quad, "goto", "", "", t2);
 
                 $$.sym_tab_info = $1;
 
@@ -1155,6 +1285,10 @@ if_statement    : T_if test T_colon suite elif_statement optional_else
                       #endif
                       vector<string> gen_int_code{$2.code,$2.true_l,":\n",$4.code,"goto ",t2,"\n",$2.false_l,":\n",$5.code,$6.code,t2,":\n"};
                       $$.code = conversion(gen_int_code);
+
+                      push_quad(ptr_quad, "Label", "", "", t2);
+                      push_quad(ptr_quad, "goto", "", "", t2);
+
                     }
 
                     //there exists only elif but no else statement
@@ -1165,6 +1299,10 @@ if_statement    : T_if test T_colon suite elif_statement optional_else
                       #endif
                       vector<string> gen_int_code{$2.code,$2.true_l,":\n",$4.code,"goto ",t2,"\n",$2.false_l,":\n",$5.code,"goto ",t2,"\n",t2,":\n"};
                       $$.code = conversion(gen_int_code);
+
+                      push_quad(ptr_quad, "Label", "", "", t2);
+                      push_quad(ptr_quad, "goto", "", "", t2);
+
                     }
 
                     //there exists no elif statement but there is an else statement
@@ -1176,6 +1314,9 @@ if_statement    : T_if test T_colon suite elif_statement optional_else
 
                       vector<string> gen_int_code{$2.code,$2.true_l,":\n",$4.code,"goto ",t2,"\n",$2.false_l,":\n",$6.code,t2,":\n"};
                       $$.code = conversion(gen_int_code);
+
+                      push_quad(ptr_quad, "Label", "", "", t2);
+                      push_quad(ptr_quad, "goto", "", "", t2);
 
                       #if DEBUG
                       printf("\n\ninside if:\n\n");
@@ -1434,8 +1575,42 @@ for_statement   : T_for
 
                     ++label_no;
 
-                    vector<string> gen_int_code{$3,"=",$5.start_r,"\n",t2,":\n",$7.code,$3," = ",$3," + ",$5.step_r,"\n","if ",$3," < ",$5.end_r," goto ",t2,"\ngoto ",t3,"\n",t3,":\n"};
+                    string temp = to_string(temp_no);
+                    string t_no = "t";
+                    temp = t_no + temp;
+                    char *t4 = new char[temp.size() + 1];
+                    copy(temp.begin(),temp.end(), t4);
+
+                    ++temp_no;
+
+                    string temp_2 = to_string(temp_no);
+                    string t_no_2 = "t";
+                    temp_2 = t_no_2 + temp_2;
+                    char *t5 = new char[temp_2.size() + 1];
+                    copy(temp_2.begin(),temp_2.end(), t5);
+
+                    ++temp_no;
+
+                    vector<string> gen_int_code{$3,"=",$5.start_r,"\n",t2,":\n",$7.code,temp," = ",$3," + ",$5.step_r,"\n",$3,"=",temp,"\n",temp_2,"=",$3," < ",$5.end_r,"\nif ",temp_2," goto ",t2,"\ngoto ",t3,"\n",t3,":\n"};
                     $$.code = conversion(gen_int_code);
+
+                    string temp_val_1 = string($3) + string("+") + string($5.step_r);
+                    test.insert(temp, @1.first_line, temp_val_1, scope_count + 1, @1.first_column);
+
+                    string temp_val_2 = string($3) + string("<") + string($5.end_r);
+                    test.insert(temp_2, @1.first_line, temp_val_2, scope_count + 1, @1.first_column);
+
+                    push_quad(ptr_quad, "=",$5.start_r, "", $3);
+
+                    push_quad(ptr_quad, "+", $3, $5.step_r, t4);
+                    push_quad(ptr_quad, "=",t4, "", $3);
+
+                    push_quad(ptr_quad, "<", $3, $5.end_r, t5);
+                                        
+                    push_quad(ptr_quad, "Label", "", "", t2);
+                    push_quad(ptr_quad, "if", t4, "", t2);
+                    push_quad(ptr_quad, "Label", "", "", t3);
+                    push_quad(ptr_quad, "goto", "", "", t3);
 
                     $$.addr = "";
                     $$.true_l = "";
@@ -1448,6 +1623,7 @@ for_statement   : T_for
                     
 
                     test.insert($3, @3.first_line, $5.start_r , scope_count + 1, @3.first_column);
+                    
 
                     #if DEBUG
                     printf("scope count%d\n",scope_count);
