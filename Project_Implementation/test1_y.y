@@ -7,7 +7,7 @@
 #include "test1.hpp"
 #include <vector>
 
-#define DEBUG 0
+#define DEBUG 1
 
 using namespace std;
 symbol_table test;
@@ -33,6 +33,7 @@ extern FILE *yyin;
 extern FILE *yyout;
 extern int yylineno;
 int scope_count;
+string final_int_code;
 extern "C"
 {
     int yyparse(void);
@@ -88,7 +89,23 @@ extern "C"
 prog_start : input_file
              {
                 $$.code = $1.code;
-                printf("\n\n\n\nGenerated Intermediate Code: \n\n%s\n\n\n",$1.code);
+                final_int_code = $1.code;
+                
+                // printf("\n\n\n\nGenerated Intermediate Code: \n\n%s\n\n\n",$1.code);
+                // FILE *fp = fopen("generated_intermediate_code.txt","w");
+
+                // if(fp!=NULL)
+                // {
+                //   fputs($1.code,fp);
+                // }
+                // else
+                // {
+                //   printf("\nError: Unable to open file\n");
+                // }
+
+                //disp_quad(ptr_quad);
+                
+
              }
              ;
 
@@ -321,21 +338,22 @@ assignment_statement    : T_identifier T_assignment assignment_expr
                                 //vector<string> temp1{$1,$2,$3}; 
                                 //$$ = conversion(temp1); 
 
-                                vector<string> gen_int_code{$3.code,$1,$2,$3.addr,"\n"};
+                                vector<string> gen_int_code{$3.code,$1,"=",$3.addr,"\n"};
                                 $$.code = conversion(gen_int_code);
 
                                 #if DEBUG
                                 printf("\ninside assignment expression: %s\n",$$.code);
+                                printf("\n$3:%s\n$1:%s\n$2:%s\n$3.addr:%s\n",$3.code,$1,$2,$3.addr);
                                 #endif
 
                                 $$.addr = $3.addr;
                                 $$.true_l = $3.true_l;
                                 $$.false_l = $3.false_l;
                                 
-                                vector<string> temp_sym_tab{$1,$2,$3.sym_tab_info};
+                                vector<string> temp_sym_tab{$1,"=",$3.sym_tab_info};
                                 $$.sym_tab_info = conversion(temp_sym_tab);
 
-                                push_quad(ptr_quad, $2, $3.addr, "", $1);
+                                push_quad(ptr_quad, "=", $3.addr, "", $1);
 
 
                           }
@@ -354,11 +372,11 @@ assignment_expr : or_test
                 | T_list T_left_par T_right_par 
                   {
                     vector<string> temp1{$1,$2,$3}; 
-                    $$.code = conversion(temp1);
-                    $$.addr = "";
+                    $$.code = "";
+                    $$.addr = conversion(temp1);
                     $$.true_l = "";
                     $$.false_l = "";
-                    $$.sym_tab_info = $$.code;
+                    $$.sym_tab_info = conversion(temp1);
 
 
                   }
@@ -366,11 +384,11 @@ assignment_expr : or_test
                 | T_left_sq_b T_right_sq_b
                   {
                     vector<string> temp1{$1,$2}; 
-                    $$.code = conversion(temp1);
-                    $$.addr = "";
+                    $$.code = "";
+                    $$.addr = conversion(temp1);
                     $$.true_l = "";
                     $$.false_l = "";
-                    $$.sym_tab_info = $$.code;
+                    $$.sym_tab_info = conversion(temp1);
 
                   }
                 ;
@@ -860,20 +878,24 @@ arith_exp   : arith_exp T_plus arith_exp2
 
                 ++temp_no;
 
-                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,"+",$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                string temp_val = string($1.addr) + string($2) + string($3.addr);
+                string temp_val = string($1.addr) + string("+") + string($3.addr);
 
                 test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
 
-                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                vector<string> temp_sym_tab{$1.sym_tab_info,"+",$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
 
-                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
+                push_quad(ptr_quad, "+", $1.addr, $3.addr, t2);
+
+                #if DEBUG
+                printf("\ninside arith exp (plus):\n%s \n\n",$$.code);
+                #endif
 
               }
             | arith_exp T_minus arith_exp2 
@@ -891,20 +913,20 @@ arith_exp   : arith_exp T_plus arith_exp2
 
                 ++temp_no;
 
-                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,"-",$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                string temp_val = string($1.addr) + string($2) + string($3.addr);
+                string temp_val = string($1.addr) + string("-") + string($3.addr);
 
                 test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
 
-                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                vector<string> temp_sym_tab{$1.sym_tab_info,"-",$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
 
-                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
+                push_quad(ptr_quad, "-", $1.addr, $3.addr, t2);
 
 
               }
@@ -933,20 +955,20 @@ arith_exp2  : arith_exp2 T_star factor
 
                 ++temp_no;
 
-                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,"*",$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                string temp_val = string($1.addr) + string($2) + string($3.addr);
+                string temp_val = string($1.addr) + string("*") + string($3.addr);
 
                 test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
 
-                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                vector<string> temp_sym_tab{$1.sym_tab_info,"*",$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
 
-                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
+                push_quad(ptr_quad, "*", $1.addr, $3.addr, t2);
 
               }
 
@@ -965,20 +987,20 @@ arith_exp2  : arith_exp2 T_star factor
 
                 ++temp_no;
 
-                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,"/",$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                string temp_val = string($1.addr) + string($2) + string($3.addr);
+                string temp_val = string($1.addr) + string("/") + string($3.addr);
 
                 test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
 
-                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                vector<string> temp_sym_tab{$1.sym_tab_info,"/",$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
 
-                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
+                push_quad(ptr_quad, "/", $1.addr, $3.addr, t2);
 
               }
 
@@ -997,20 +1019,20 @@ arith_exp2  : arith_exp2 T_star factor
 
                 ++temp_no;
 
-                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,$2,$3.addr,"\n"};
+                vector<string> gen_int_code{$1.code,$3.code,temp,"=",$1.addr,"%",$3.addr,"\n"};
                 $$.code = conversion(gen_int_code);
 
-                string temp_val = string($1.addr) + string($2) + string($3.addr);
+                string temp_val = string($1.addr) + string("%") + string($3.addr);
 
                 test.insert(temp, @1.first_line, temp_val, scope_count, @1.first_column);
 
                 $$.true_l = $1.true_l;
                 $$.false_l = $1.false_l;
 
-                vector<string> temp_sym_tab{$1.sym_tab_info,$2,$3.sym_tab_info};
+                vector<string> temp_sym_tab{$1.sym_tab_info,"%",$3.sym_tab_info};
                 $$.sym_tab_info = conversion(temp_sym_tab);
 
-                push_quad(ptr_quad, $2, $1.addr, $3.addr, t2);
+                push_quad(ptr_quad, "%", $1.addr, $3.addr, t2);
 
               }
 
@@ -1768,15 +1790,29 @@ int main()
     if (!yyparse() && flag) 
     {
         printf("\n\n\nParsing is successful\n\n\n");
-        disp_quad(ptr_quad);
     } 
     else 
     {
         printf("\n\nParsing is unsuccessful\n\n");
     }
             
-    cout<<"DISPLAY is \n";
+    cout<<"SYMBOL TABLE: \n";
     cout << test;
+
+    cout<<"\n\n\n\nGenerated Intermediate Code: \n\n" << final_int_code << "\n\n\n";
+    FILE *fp = fopen("generated_intermediate_code.txt","w");
+
+    if(fp!=NULL)
+    {
+      fputs(final_int_code.c_str(),fp);
+    }
+    else
+    {
+      printf("\nError: Unable to open file\n");
+    }
+
+    disp_quad(ptr_quad,1);
+    disp_quad(ptr_quad,0);
         
     return 0;
 

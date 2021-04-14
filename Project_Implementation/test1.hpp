@@ -107,4 +107,40 @@ class symbol_table : public node
 //function that converts a string vector into a char*
 char *conversion(vector<string> vec_s);
 
+
+//data structure to store the intermediate code in quadruple format
+struct quadruple_node
+{
+    char *op;
+    char *arg1;
+    char *arg2;
+    char *res;
+    struct quadruple_node *next;
+    struct quadruple_node *prev;
+};
+
+typedef struct quadruple_node quadruple_node_t; 
+
+struct quadruple
+{
+    quadruple_node_t *head;
+    quadruple_node_t *top;
+};
+
+typedef struct quadruple quadruple_t;
+
+//function to initialize the quadruple
+void init_quad(quadruple_t *ptr_quad);
+
+//function to insert a record into the quadruple data structure
+void push_quad(quadruple_t *ptr_quad, char *op, char *arg1, char *arg2, char *res);
+
+//function to display the contents of the quadruple data structure
+void disp_quad(quadruple_t *ptr_quad, int flag);
+
+
+
+
+
+
 #endif

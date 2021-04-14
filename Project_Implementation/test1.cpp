@@ -1,8 +1,10 @@
 #include "test1.hpp"
+#include <cstdlib>
 #include <string>
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <cstdio>
 using namespace std;
 
 //node of the symbol table
@@ -229,11 +231,101 @@ char *conversion(vector<string> vec_s)
     for (auto &i : vec_s)
     {
         // cout << i << "\n";
-        temp += i;
+        temp = temp + i;
     }
 
     char *writable = new char[temp.size() + 1];
     std::copy(temp.begin(), temp.end(), writable);
     writable[temp.size()] = '\0'; 
     return writable;
+}
+
+
+//function to initialize the quadruple
+void init_quad(quadruple_t *ptr_quad)
+{
+    ptr_quad->head = NULL;
+    ptr_quad->top = NULL;
+}
+
+//function to insert a record into the quadruple data structure
+void push_quad(quadruple_t *ptr_quad, char *op, char *arg1, char *arg2, char *res)
+{
+    quadruple_node_t *temp = (quadruple_node_t*)malloc(sizeof(quadruple_node_t));
+    temp->op = op;
+    temp->arg1 = arg1;
+    temp->arg2 = arg2;
+    temp->res = res;
+    temp->next = NULL;
+    temp->prev = NULL;
+
+    //quad data structure is empty
+    if(ptr_quad->head == NULL)
+    {
+        ptr_quad->head = temp;
+        ptr_quad->top = temp;
+    }
+
+    //quad data structure is not empty
+    else
+    {
+        ptr_quad->top->next = temp;
+        temp->prev = ptr_quad->top;
+        ptr_quad->top = temp;
+    }
+
+}
+
+template<typename T>
+void print_elem_quad(T t, const int& width)
+{
+    const char separator = ' ';
+    cout << left << setw(width) << setfill(separator) << t;
+}
+
+//function to display the contents of the quadruple data structure
+void disp_quad(quadruple_t *ptr_quad, int flag)
+{
+    quadruple_node_t *trav = ptr_quad->head;
+
+    // cout<<"Quadruple form of Intermediate Code:\n\n";
+    // cout<<"Operator     Arg 1     Arg 2     Result\n";
+    // while(trav!=NULL)
+    // {
+    //     cout<<trav->op<<"\t     "<<trav->arg1<<"\t       "<<trav->arg2<<"\t         "<<trav->res<<"\n";
+    //     trav = trav->next;
+    // }
+    // cout<<"\n\n";
+
+    if(flag==0)
+    {
+        freopen("quad_intermediate_code.txt","w",stdout);
+    }
+    else
+    {
+        cout<<"Quadruple form of Intermediate Code:\n\n";
+        print_elem_quad("Operator",15);
+        print_elem_quad("Arg 1",15);
+        print_elem_quad("Arg 2",15);
+        print_elem_quad("Result",15);
+        cout<<"\n\n";
+    }
+    
+    while(trav!=NULL)
+    {
+        print_elem_quad(trav->op,15);
+        print_elem_quad(trav->arg1,15);
+        print_elem_quad(trav->arg2,15);
+        print_elem_quad(trav->res,15);
+        cout<<"\n";
+        trav = trav->next;
+    }
+
+    if(flag==1)
+    {
+        cout<<"\n\n";
+    }
+    
+
+
 }
