@@ -1,4 +1,5 @@
 import copy
+import math
 
 #global variable
 flag_const = 0
@@ -37,6 +38,10 @@ def quad_ds_retrieve(quad_ds, curr_line, var):
     return -1
 
 
+#function to check if a number is a power of 2 or not
+def is_power_of_2(n):
+
+    return n and (not(n&(n-1)))
 
 
 
@@ -389,7 +394,7 @@ def constant_folding_opt(quad_ds):
                 
 
 
-#function to peform constant propagation optimisation
+#function to perform constant propagation optimisation
 def constant_propagation(quad_ds):
 
     global flag_const
@@ -1211,7 +1216,144 @@ def common_subexpression_elim(quad_ds):
                     for trav_ind in temp_rem_ind:
                         quad_ds.pop(trav_ind)
 
-                                
+
+
+#function to perform strength reduction optimisation
+def strength_reduction(quad_ds):
+
+    for i in range(len(quad_ds)):
+
+        line = quad_ds[i]
+
+        #binary operators
+        if len(line) == 4:
+
+            #variable * (2^i) => variable << i
+            if line['op'] == '*':
+
+                arg1_f = arg_is_dig(line['arg1'])
+                arg2_f = arg_is_dig(line['arg2'])
+
+                #if arg1 is a variable and arg2 is a number
+                if not(arg1_f) and arg2_f:
+
+                    if '.' not in line['arg2']:
+                        num = int(line['arg2'])
+                        res = is_power_of_2(num)
+                        
+                        if res:
+                            shift_value = int(math.log2(num))
+
+                            quad_ds[i]['op'] = '<<'
+                            quad_ds[i]['arg2'] = shift_value
+
+
+                #if arg1 is a number and arg2 is a variable
+                if arg1_f and not(arg2_f):
+
+                    if '.' not in line['arg1']:
+                        num = int(line['arg1'])
+                        res = is_power_of_2(num)
+                                                
+                        if res:
+                            shift_value = int(math.log2(num))
+
+                            quad_ds[i]['op'] = '<<'
+                            quad_ds[i]['arg1'] = quad_ds[i]['arg2']
+                            quad_ds[i]['arg2'] = shift_value
+
+
+            #variable / (2^i) => variable >> i
+            elif line['op'] == '/':
+
+                arg1_f = arg_is_dig(line['arg1'])
+                arg2_f = arg_is_dig(line['arg2'])
+
+                #if arg1 is a variable and arg2 is a number
+                if not(arg1_f) and arg2_f:
+
+                    if '.' not in line['arg2']:
+                        num = int(line['arg2'])
+                        res = is_power_of_2(num)
+                                        
+                        if res:
+                            shift_value = int(math.log2(num))
+
+                            quad_ds[i]['op'] = '>>'
+                            quad_ds[i]['arg2'] = shift_value
+
+
+                #if arg1 is a number and arg2 is a variable
+                if arg1_f and not(arg2_f):
+
+                    if '.' not in line['arg1']:
+                        num = int(line['arg1'])
+                        res = is_power_of_2(num)
+                                                                
+                        if res:
+                            shift_value = int(math.log2(num))
+
+                            quad_ds[i]['op'] = '>>'
+                            quad_ds[i]['arg1'] = quad_ds[i]['arg2']
+                            quad_ds[i]['arg2'] = shift_value
+
+
+
+#function to print the quadruple data structure in table format
+def print_quad(quad_ds):
+
+    print()
+    print()
+    print('%-12s' % "Operator",'%-12s' % "Arg1",'%-12s' % "Arg2",'%-12s' % "Result")
+
+    for i in range(len(quad_ds)):
+
+        line = quad_ds[i]
+
+        if len(line) == 4:
+            print('%-12s' % line['op'],'%-12s' % line['arg1'],'%-12s' % line['arg2'],'%-12s' % line['res'])
+
+        elif len(line) == 3:
+            print('%-12s' % line['op'],'%-12s' % line['arg1'],'%-12s' % "",'%-12s' % line['res'])
+
+        elif len(line) == 2:
+            print('%-12s' % line['op'],'%-12s' % "",'%-12s' % "",'%-12s' % line['res'])
+
+
+    print()
+    print()
+
+
+
+#function to print the intermediate code from the quadruple data structure
+def print_icg(quad_ds):
+
+    print()
+    print()
+
+    for i in range(len(quad_ds)):
+        line = quad_ds[i]
+
+        if len(line) == 4:
+            print(line['res'],"=",line['arg1'],line['op'],line['arg2'])
+
+        elif len(line) == 3:
+            
+            if line['op'] == '=':
+                print(line['res'],"=",line['arg1'])
+
+            elif line['op'] == 'if':
+                print(line['op'],line['arg1'],"goto",line['res'])
+
+        elif len(line) == 2:
+
+            if line['op'] == "goto":
+                print(line['op'],line['res'])
+
+    
+    print()
+    print()
+
 
 
 
@@ -1254,18 +1396,24 @@ if __name__ == "__main__":
 
         quad_ds.append(temp)
 
-    print(quad_ds)
+    print_quad(quad_ds)
+    print_icg(quad_ds)
 
     constant_folding_opt(quad_ds)
 
-    print("\n\n\n")
-    print(quad_ds)
-    print("\n\n\n")
+    print_quad(quad_ds)
+    print_icg(quad_ds)
 
-    constant_propagation(quad_ds)
-    print("\n\n")
-    print(quad_ds)
+
+    # constant_propagation(quad_ds)
+    # print_quad(quad_ds)
+    # print_icg(quad_ds)
 
     # common_subexpression_elim(quad_ds)
-    # print(quad_ds)
+    # print_quad(quad_ds)
+    # print_icg(quad_ds)
+
+    strength_reduction(quad_ds)
+    print_quad(quad_ds)
+    print_icg(quad_ds)
 
