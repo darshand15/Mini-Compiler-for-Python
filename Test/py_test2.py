@@ -12,7 +12,14 @@ for i in range(a):
         else:
             mod_flag = 0
         
-        
+#test comment    
+
+'''
+test
+multi line
+comment
+triple single quotes
+''' 
     
 if a==3:
     d = 4

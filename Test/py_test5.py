@@ -7,6 +7,6 @@ b = 2
 
 # d = [ #missing closing square brackets error
 
-# a === 8 #invalid operator error
+a === 8 #invalid operator error
 
 c = 7

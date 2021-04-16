@@ -1,0 +1,19 @@
+a=5
+b=7
+t0=a+b
+d=t0
+t1=a==5
+ift1gotoL0
+gotoL1
+L1:
+t2=b==7
+ift2gotoL2
+gotoL3
+
+L2:
+L0:
+c=8
+goto L4
+L3:
+c=9
+L4:

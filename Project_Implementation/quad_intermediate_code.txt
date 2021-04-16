@@ -1,0 +1,18 @@
+=              5                             a              
+=              7                             b              
++              a              b              t0             
+=              t0                            d              
+==             a              5              t1             
+Label                                        L0             
+if             t1                            L0             
+Label                                        L1             
+goto                                         L1             
+==             b              7              t2             
+Label                                        L2             
+if             t2                            L2             
+Label                                        L3             
+goto                                         L3             
+=              8                             c              
+=              9                             c              
+Label                                        L4             
+goto                                         L4             
