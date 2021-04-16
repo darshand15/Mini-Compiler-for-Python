@@ -390,16 +390,16 @@ my_stack_t *ptr_my_stack;
                                 
                             }
 
-                            if(yyleng < 32)
+                            if(yyleng < 80)
                             {
                                 yylval.text = strdup(yytext);
                             }
                             else
                             {
-                                printf("\n\nError: Identifier is too long, truncating the identifier to the first 31 characters\n\n");
-                                char id_temp[32];
-                                strncpy(id_temp,yytext,31);
-                                id_temp[31] = '\0';
+                                printf("\n\nError: Identifier is too long, truncating the identifier to the first 79 characters\n\n");
+                                char id_temp[80];
+                                strncpy(id_temp,yytext,79);
+                                id_temp[79] = '\0';
                                 yylval.text = strdup(id_temp);
 
                             }                            

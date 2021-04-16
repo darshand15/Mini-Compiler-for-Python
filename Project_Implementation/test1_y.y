@@ -7,7 +7,7 @@
 #include "test1.hpp"
 #include <vector>
 
-#define DEBUG 1
+#define DEBUG 0
 
 using namespace std;
 symbol_table test;

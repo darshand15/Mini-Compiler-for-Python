@@ -1305,6 +1305,7 @@ def print_quad(quad_ds):
     print()
     print()
     print('%-12s' % "Operator",'%-12s' % "Arg1",'%-12s' % "Arg2",'%-12s' % "Result")
+    print()
 
     for i in range(len(quad_ds)):
 
@@ -1396,24 +1397,45 @@ if __name__ == "__main__":
 
         quad_ds.append(temp)
 
-    print_quad(quad_ds)
-    print_icg(quad_ds)
 
+
+    print("Intermediate Code before Optimization")
+    print_icg(quad_ds)
+    print("Intermediate Code in Quadruple Format before Optimization")
+    print_quad(quad_ds)
+    
+
+
+    #constant folding
     constant_folding_opt(quad_ds)
-
-    print_quad(quad_ds)
+    print("Intermediate Code generated after Constant Folding Optimization")
     print_icg(quad_ds)
+    print("Intermediate Code in Quadruple format after Constant Folding Optimization")
+    print_quad(quad_ds)
+    
 
 
+    #constant propagation
     # constant_propagation(quad_ds)
-    # print_quad(quad_ds)
+    # print("Intermediate Code generated after Constant Propagation Optimization")
     # print_icg(quad_ds)
+    # print("Intermediate Code in Quadruple format after Constant Propagation Optimization")
+    # print_quad(quad_ds)
 
+
+
+    #common subexpression elimination
     # common_subexpression_elim(quad_ds)
-    # print_quad(quad_ds)
+    # print("Intermediate Code generated after Common Subexpression Elimination Optimization")
     # print_icg(quad_ds)
+    # print("Intermediate Code in Quadruple format after Common Subexpression Elimination Optimization")
+    # print_quad(quad_ds)
 
+
+    #strength reduction
     strength_reduction(quad_ds)
-    print_quad(quad_ds)
+    print("Intermediate Code generated after Strength Reduction Optimization")
     print_icg(quad_ds)
+    print("Intermediate Code in Quadruple format after Strength Reduction Optimization")
+    print_quad(quad_ds)
 
